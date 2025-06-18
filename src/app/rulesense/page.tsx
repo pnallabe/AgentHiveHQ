@@ -6,14 +6,14 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card"; // Removed CardHeader, CardDescription as they are not used here anymore
+import { Card, CardContent } from "@/components/ui/card";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useState, useRef } from "react";
-import { getRuleSenseAnalysis, type RuleSenseOutput } from "@/ai/flows/rulesense-flow";
-import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle } from "lucide-react";
+import { getRuleSenseAnalysis, type RuleSenseOutput, type RuleSenseInput } from "@/ai/flows/rulesense-flow";
+import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle, FileSearch } from "lucide-react";
 import { AnimatedSection } from "@/components/landing/animated-section";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ const formSchema = z.object({
 });
 type FormData = z.infer<typeof formSchema>;
 
-const ALLOWED_FILE_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/xml", "text/xml"];
+const ALLOWED_FILE_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/xml", "text/xml", "text/plain"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default function RuleSenseAppPage() {
@@ -44,7 +44,7 @@ export default function RuleSenseAppPage() {
     if (!file) return true; 
 
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      setFileError(`Invalid file type. Allowed: DOC, DOCX, PDF, XML. Got: ${file.type}`);
+      setFileError(`Invalid file type. Allowed: DOC, DOCX, PDF, XML, TXT. Got: ${file.type}`);
       return false;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -73,7 +73,6 @@ export default function RuleSenseAppPage() {
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set dragging to false if not leaving to a child element
     if (e.currentTarget.contains(e.relatedTarget as Node)) {
       return;
     }
@@ -120,14 +119,34 @@ export default function RuleSenseAppPage() {
       return;
     }
 
-    console.log("Scenario Data:", data);
+    let documentContext: string | undefined = undefined;
+
     if (uploadedFile) {
       console.log("Uploaded File:", uploadedFile.name, uploadedFile.size, uploadedFile.type);
-      // TODO: Implement file parsing and integration with AI flow
+      if (uploadedFile.type === "text/plain") {
+        try {
+          documentContext = await uploadedFile.text();
+        } catch (readError) {
+          console.error("Error reading text file:", readError);
+          setFileError("Could not read the content of the text file.");
+          // Keep documentContext as the filename as a fallback
+          documentContext = `Content of document: ${uploadedFile.name} (Error reading content)`;
+        }
+      } else {
+        // For non-plain-text files, use filename as context for now
+        documentContext = `Content of document: ${uploadedFile.name}`;
+      }
+    }
+    
+    const aiInput: RuleSenseInput = {
+      scenarioDescription: data.scenario,
+    };
+    if (documentContext) {
+      aiInput.documentContext = documentContext;
     }
 
     try {
-      const result = await getRuleSenseAnalysis({ scenarioDescription: data.scenario });
+      const result = await getRuleSenseAnalysis(aiInput);
       setAnalysisResult(result);
     } catch (err) {
       console.error("Error getting RuleSense analysis:", err);
@@ -146,7 +165,7 @@ export default function RuleSenseAppPage() {
             RuleSense AI Assistant
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Describe your regulatory or compliance scenario below. You can also drag & drop or upload a relevant document for context.
+            Describe your regulatory or compliance scenario. You can also drag & drop or upload a document (TXT, PDF, DOC, DOCX, XML) for context.
           </p>
         </AnimatedSection>
 
@@ -183,7 +202,6 @@ export default function RuleSenseAppPage() {
                 )}
               />
 
-              {/* Integrated File Upload Area */}
               {!uploadedFile && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -199,7 +217,7 @@ export default function RuleSenseAppPage() {
                       {dragging ? "Drop file to attach" : "Drag & drop document or click to upload"}
                     </span>
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">DOC, DOCX, PDF, XML (Max 5MB)</p>
+                  <p className="mt-1 text-xs text-muted-foreground">TXT, PDF, DOC, DOCX, XML (Max 5MB)</p>
                 </div>
               )}
               <input
@@ -209,7 +227,7 @@ export default function RuleSenseAppPage() {
                 ref={fileInputRef}
                 className="sr-only"
                 onChange={handleFileInputChange}
-                accept=".doc,.docx,.pdf,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/xml,text/xml"
+                accept=".doc,.docx,.pdf,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/xml,text/xml,.txt,text/plain"
               />
               {fileError && <p className="mt-2 text-sm text-destructive">{fileError}</p>}
 
@@ -264,8 +282,8 @@ export default function RuleSenseAppPage() {
 
         {error && !isLoading && (
           <AnimatedSection className="mt-8">
-            <Card className="border-destructive bg-destructive/10 p-4 rounded-lg"> {/* Ensure Card is imported if used like this */}
-              <CardContent className="p-0"> {/* Reset padding for CardContent if Card has padding */}
+            <Card className="border-destructive bg-destructive/10 p-4 rounded-lg">
+              <CardContent className="p-0"> 
                 <div className="flex items-center text-destructive">
                   <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
                   <p className="font-medium">{error}</p>
@@ -278,15 +296,27 @@ export default function RuleSenseAppPage() {
         {analysisResult && !isLoading && (
           <AnimatedSection className="mt-10 space-y-8">
             <Card className="rounded-xl shadow-lg">
-               <CardContent className="p-6"> {/* Ensure content is wrapped in CardContent if CardHeader is removed */}
+               <CardContent className="p-6"> 
                 <h2 className="text-2xl font-semibold text-primary mb-2">AI Analysis Summary</h2>
                 {analysisResult.scenarioSummary ? (
                     <p className="text-muted-foreground pt-2">{analysisResult.scenarioSummary}</p>
                 ) : (
-                    <p className="text-muted-foreground pt-2">No summary provided.</p>
+                    <p className="text-muted-foreground pt-2">No scenario summary provided.</p>
                 )}
               </CardContent>
             </Card>
+
+            {analysisResult.documentSummary && (
+              <Card className="rounded-xl shadow-lg bg-secondary/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-3">
+                    <FileSearch className="h-6 w-6 text-accent mr-2" />
+                    <h3 className="text-xl font-semibold text-foreground">Document Summary</h3>
+                  </div>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{analysisResult.documentSummary}</p>
+                </CardContent>
+              </Card>
+            )}
             
             <Card className="rounded-xl shadow-lg">
               <CardContent className="p-6">
@@ -344,5 +374,3 @@ export default function RuleSenseAppPage() {
     </div>
   );
 }
-
-    
