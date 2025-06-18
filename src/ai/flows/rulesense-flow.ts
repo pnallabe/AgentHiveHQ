@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for RuleSense AI to analyze compliance scenarios,
- * optionally considering an uploaded document's content and providing a summary.
+ * or answer questions based on an uploaded document's content, and provide summaries.
  *
  * - getRuleSenseAnalysis - A function that handles the RuleSense analysis process.
  * - RuleSenseInput - The input type for the getRuleSenseAnalysis function.
@@ -13,18 +13,18 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const RuleSenseInputSchema = z.object({
-  scenarioDescription: z.string().describe("A detailed description of the user's regulatory or compliance scenario."),
-  documentContext: z.string().optional().describe('Optional textual content of an uploaded document (for .txt files) or a string like "Content of document: filename.ext" (for .pdf, .doc, .docx, .xml files) to be considered and summarized.'),
+  scenarioDescription: z.string().describe("A detailed description of the user's regulatory/compliance scenario, or a specific question about an uploaded document."),
+  documentContext: z.string().optional().describe('Optional textual content of an uploaded document (for .txt files) or a string like "Content of document: filename.ext" (for .pdf, .doc, .docx, .xml files) to be considered.'),
 });
 export type RuleSenseInput = z.infer<typeof RuleSenseInputSchema>;
 
 const RuleSenseOutputSchema = z.object({
-  scenarioSummary: z.string().describe("A brief summary of the AI's understanding of the user's scenario."),
-  complianceChecklist: z.array(z.string()).describe('A step-by-step compliance checklist tailored to the scenario.'),
-  relevantCitations: z.array(z.string()).describe('A list of relevant legal or regulatory citations, including specific sections if possible.'),
-  actionableGuidance: z.string().describe('Clear, actionable guidance on how to proceed, including next steps or considerations.'),
-  potentialRisks: z.array(z.string()).optional().describe('Potential risks or areas of concern that the user should be aware of.'),
-  documentSummary: z.string().optional().describe('A concise summary of the provided document context, if any. For .pdf, .doc, .docx, .xml files where only the filename is provided, this summary will acknowledge the file and state that content analysis is in development.'),
+  scenarioSummary: z.string().describe("A brief summary of the AI's understanding of the user's scenario or question."),
+  complianceChecklist: z.array(z.string()).describe('A step-by-step compliance checklist (may be N/A if query is document-specific).'),
+  relevantCitations: z.array(z.string()).describe('Relevant legal or regulatory citations (may be N/A if query is document-specific).'),
+  actionableGuidance: z.string().describe('Clear, actionable guidance, or the answer to a document-specific question based on its content.'),
+  potentialRisks: z.array(z.string()).optional().describe('Potential risks or areas of concern (may be N/A if query is document-specific).'),
+  documentSummary: z.string().optional().describe('A concise summary of the provided document context. If full content cannot be processed, this will acknowledge the file and state that content analysis is in development.'),
 });
 export type RuleSenseOutput = z.infer<typeof RuleSenseOutputSchema>;
 
@@ -36,42 +36,52 @@ const ruleSensePrompt = ai.definePrompt({
   name: 'ruleSenseCompliancePrompt',
   input: { schema: RuleSenseInputSchema },
   output: { schema: RuleSenseOutputSchema },
-  prompt: `You are RuleSense, an expert AI assistant specializing in regulatory and compliance matters.
-Your goal is to provide comprehensive, clear, and actionable advice based on the user's scenario and any provided document context.
+  prompt: `You are RuleSense, an expert AI assistant.
+Your primary goal is to assist users with their regulatory and compliance scenarios OR answer questions based on an uploaded document.
 
-**Important Note on Document Processing:**
-- If the 'Additional Context from Uploaded Document' below appears to be the full text of a document (e.g., from a .txt file), please use that text for your analysis and summarize it in the 'Document Summary'.
-- If the 'Additional Context from Uploaded Document' looks like "Content of document: filename.pdf", "Content of document: filename.doc", "Content of document: filename.docx", or "Content of document: filename.xml", it means I cannot directly process the full content of these specific file types in this interaction.
-  In such cases, for the 'Document Summary' field:
-    - Acknowledge the document by its name and type (e.g., "The document 'report.pdf' (PDF) has been noted.").
-    - State that "Direct content analysis and summarization for this file type are currently in development."
-    - Do NOT attempt to guess or summarize the content based on the filename alone.
-  Consider the existence of such a document if it's mentioned as relevant in the user's scenario description, but do not infer its content.
-
-Scenario Description from User:
-{{{scenarioDescription}}}
+**DOCUMENT PROCESSING AND Q&A INSTRUCTIONS (VERY IMPORTANT):**
 
 {{#if documentContext}}
-Additional Context from Uploaded Document:
-{{{documentContext}}}
+  A document context has been provided.
+  User's Query (interpret as a question about the document if the document's full text is available, otherwise as a general scenario):
+  {{{scenarioDescription}}}
 
-Based on the scenario AND the document context (if provided, following the "Important Note on Document Processing" above), please provide the following:
-1.  **Scenario Summary**: Briefly summarize your understanding of the user's situation. If full document text was provided and is relevant, incorporate key points.
-2.  **Compliance Checklist**: Generate a detailed, step-by-step checklist of compliance actions.
-3.  **Relevant Citations**: List key legal acts, regulations, or standards that apply.
-4.  **Actionable Guidance**: Offer clear advice on how the user should proceed.
-5.  **Potential Risks (Optional but Recommended)**: Highlight any potential risks or areas of concern.
-6.  **Document Summary**: If documentContext was provided, generate a response according to the "Important Note on Document Processing" above. If no documentContext was provided, omit this field or leave it empty.
+  Provided Document Context:
+  {{{documentContext}}}
+
+  **Case 1: Full Document Text Provided (e.g., from a .txt file)**
+  If the 'Provided Document Context' appears to be the full textual content of a document:
+    1.  **Primary Task**: Your main goal is to answer the "User's Query" STRICTLY based on the information contained within the 'Provided Document Context'.
+    2.  **Source Limitation**: Do NOT use any external knowledge or information outside of the 'Provided Document Context' to answer the query. If the answer is not found in the document, explicitly state that.
+    3.  **Output - \`actionableGuidance\`**: This field MUST contain your detailed answer to the "User's Query", derived solely from the document.
+    4.  **Output - \`scenarioSummary\`**: Briefly summarize/rephrase the "User's Query".
+    5.  **Output - \`documentSummary\`**: Provide a concise summary of the 'Provided Document Context' itself.
+    6.  **Output - \`complianceChecklist\`, \`relevantCitations\`, \`potentialRisks\`**:
+        *   If the "User's Query" is clearly asking for information *from* the document (e.g., "What does section 3 say about X?"), populate these fields with a message like "N/A - Query is specific to the provided document content."
+        *   If the document *itself* contains compliance information and the "User's Query" is related to that, you MAY populate these fields based on the document's content. Use your judgment.
+
+  **Case 2: Filename Provided for .pdf, .doc, .docx, .xml files**
+  If the 'Provided Document Context' looks like "Content of document: filename.pdf", "Content of document: filename.doc", "Content of document: filename.docx", or "Content of document: filename.xml":
+    1.  **Limitation**: You CANNOT process the full content of these specific file types in this interaction, only the filename is available.
+    2.  **Output - \`actionableGuidance\`**: Clearly state that you cannot answer questions based on the specific content of '{{documentContext}}' because direct content processing and Q&A for this file type are currently in development. However, if the "User's Query" can be interpreted as a general compliance scenario independent of the document's specific content, you may address it generally.
+    3.  **Output - \`documentSummary\`**: Acknowledge the document by its name and type (e.g., "The document 'report.pdf' (PDF) has been noted."). State: "Direct content analysis, summarization, and question-answering for this file type are currently in development. I cannot access its content." Do NOT attempt to guess or summarize the content based on the filename alone.
+    4.  **Output - \`scenarioSummary\`, \`complianceChecklist\`, \`relevantCitations\`, \`potentialRisks\`**: Address the "User's Query" as a general compliance query if possible. Note that the specific content of the mentioned document could not be used for a more detailed analysis.
+
 {{else}}
-Based on the scenario, please provide the following:
-1.  **Scenario Summary**: Briefly summarize your understanding of the user's situation.
-2.  **Compliance Checklist**: Generate a detailed, step-by-step checklist of compliance actions.
-3.  **Relevant Citations**: List key legal acts, regulations, or standards that apply.
-4.  **Actionable Guidance**: Offer clear advice on how the user should proceed.
-5.  **Potential Risks (Optional but Recommended)**: Highlight any potential risks or areas of concern.
+  No document context has been provided.
+  User's Scenario:
+  {{{scenarioDescription}}}
+
+  **Task**: Provide a comprehensive compliance analysis based on the "User's Scenario".
+  1.  **Output - \`scenarioSummary\`**: Briefly summarize your understanding of the user's situation.
+  2.  **Output - \`complianceChecklist\`**: Generate a detailed, step-by-step checklist of compliance actions.
+  3.  **Output - \`relevantCitations\`**: List key legal acts, regulations, or standards that apply.
+  4.  **Output - \`actionableGuidance\`**: Offer clear advice on how the user should proceed.
+  5.  **Output - \`potentialRisks\` (Optional but Recommended)**: Highlight any potential risks or areas of concern.
+  6.  **Output - \`documentSummary\`**: Omit this field or leave it empty, as no document was provided.
 {{/if}}
 
-Present your response in the structured JSON format defined by the output schema. Ensure each checklist item, citation, and risk is a separate string in its respective array.
+Present your response in the structured JSON format defined by the output schema. Ensure all text is clear and professional.
 `,
 });
 
@@ -90,3 +100,4 @@ const ruleSenseAnalysisFlow = ai.defineFlow(
   }
 );
 
+    
