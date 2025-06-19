@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, ShieldCheck, AlertTriangle, BarChart3, MessageSquare, FolderArchive, PlusCircle } from "lucide-react";
 import { AnimatedSection } from "@/components/landing/animated-section";
 import Link from "next/link";
+import { RegulatoryIntelligenceWidget } from "@/components/dashboard/regulatory-intelligence-widget";
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -59,17 +60,19 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <AnimatedSection delay="delay-200" className="lg:col-span-2 space-y-8">
+              <RegulatoryIntelligenceWidget />
+
               <Card className="shadow-lg rounded-xl">
                 <CardHeader>
                   <CardTitle className="text-xl">Outstanding Compliance Issues</CardTitle>
                   <CardDescription>Track and manage pending compliance tasks.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center">
-                    <AlertTriangle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center">
+                    <AlertTriangle className="h-10 w-10 text-muted-foreground/50 mb-3" />
                     <h3 className="text-lg font-semibold text-foreground">No Outstanding Issues</h3>
                     <p className="mt-1 text-sm text-muted-foreground">All compliance tasks are currently up to date.</p>
-                    <Button variant="outline" size="sm" className="mt-4">
+                    <Button variant="outline" size="sm" className="mt-4" disabled>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add New Task (Coming Soon)
                     </Button>
                   </div>
@@ -82,11 +85,11 @@ function DashboardPage() {
                   <CardDescription>Upload, organize, and analyze your compliance documents.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center">
-                    <FolderArchive className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center">
+                    <FolderArchive className="h-10 w-10 text-muted-foreground/50 mb-3" />
                     <h3 className="text-lg font-semibold text-foreground">Document Hub</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Securely manage your compliance documents here.</p>
-                     <Button variant="default" size="sm" className="mt-4">
+                     <Button variant="default" size="sm" className="mt-4" disabled>
                        <PlusCircle className="mr-2 h-4 w-4" /> Upload Document (Coming Soon)
                     </Button>
                   </div>
@@ -101,7 +104,8 @@ function DashboardPage() {
                   <CardDescription>Ask compliance questions and get AI-powered insights.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex h-[calc(2*(64px+2rem)+8rem+2*2rem)] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center"> {/* Adjusted height */}
+                   {/* Adjusted height to approximately match the new total height of the left column */}
+                  <div className="flex h-[calc(3*(48px+2rem)+10rem+2*2rem+5rem)] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background p-6 text-center">
                     <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-semibold text-foreground">Chat with RuleSense</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Get instant answers to your compliance queries.</p>
