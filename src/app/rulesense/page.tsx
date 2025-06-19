@@ -28,14 +28,12 @@ const ALLOWED_FILE_TYPES = ["application/pdf", "application/msword", "applicatio
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 if (typeof window !== 'undefined') {
-  import('pdfjs-dist/build/pdf.worker.mjs')
-    .then(pdfWorker => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = (pdfWorker as any).default;
-    })
-    .catch(error => {
-      console.error("Failed to load PDF.js worker dynamically, falling back to CDN.", error);
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-    });
+  // Directly set the workerSrc to a known CDN URL.
+  // This avoids issues with dynamic import resolution for the worker path.
+  const workerVersion = pdfjsLib.version;
+  const workerSrcUrl = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${workerVersion}/pdf.worker.min.mjs`;
+  console.log(`[RuleSensePage] Setting PDF.js workerSrc to: ${workerSrcUrl}`);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrcUrl;
 }
 
 export default function RuleSenseAppPage() {
@@ -132,10 +130,13 @@ export default function RuleSenseAppPage() {
   };
 
   const readPdfAsText = async (file: File): Promise<string> => {
+    // Ensure workerSrc is set (it should be by the top-level client-side script)
     if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        await new Promise(resolve => setTimeout(resolve, 100)); 
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-             console.warn("PDF.js worker not yet loaded. PDF parsing might fail or be slow.");
+        // This is a fallback, ideally workerSrc is set once above.
+        console.warn("[readPdfAsText] PDF.js workerSrc not set, attempting to set fallback.");
+        await new Promise(resolve => setTimeout(resolve, 100)); // Give a moment for initial setup if race condition
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) { // Double check
+             console.error("[readPdfAsText] CRITICAL: PDF.js workerSrc still not set. PDF parsing will likely fail.");
              pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
         }
     }
@@ -256,7 +257,7 @@ export default function RuleSenseAppPage() {
                 name="scenario"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel htmlFor="scenario" className="text-lg">Your Scenario / Question / Policy Request</FormLabel>
+                    <FormLabel htmlFor="scenario" className="text-lg">Your Scenario / Question about the Document / Policy Request</FormLabel>
                     <FormControl>
                       <Textarea
                         id="scenario"
@@ -455,4 +456,3 @@ export default function RuleSenseAppPage() {
     </div>
   );
 }
-
