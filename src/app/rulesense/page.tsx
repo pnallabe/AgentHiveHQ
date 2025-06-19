@@ -13,36 +13,30 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useState, useRef, useEffect } from "react";
 import { getRuleSenseAnalysis, type RuleSenseOutput, type RuleSenseInput } from "@/ai/flows/rulesense-flow";
-import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle, FileSearch } from "lucide-react";
+import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle, FileSearch, FileSignature } from "lucide-react";
 import { AnimatedSection } from "@/components/landing/animated-section";
 import { cn } from "@/lib/utils";
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy, TextItem } from 'pdfjs-dist';
 
 const formSchema = z.object({
-  scenario: z.string().min(20, { message: "Please describe your scenario or question in at least 20 characters." }).max(5000, { message: "Scenario/question description cannot exceed 5000 characters." }),
+  scenario: z.string().min(20, { message: "Please describe your scenario, question, or policy request in at least 20 characters." }).max(5000, { message: "Input cannot exceed 5000 characters." }),
 });
 type FormData = z.infer<typeof formSchema>;
 
 const ALLOWED_FILE_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/xml", "text/xml", "text/plain"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-// Setup PDF.js worker
-// Using a dynamic import for the worker is generally recommended for Next.js/webpack
 if (typeof window !== 'undefined') {
-  // Ensure worker is loaded only on client-side
   import('pdfjs-dist/build/pdf.worker.mjs')
     .then(pdfWorker => {
       pdfjsLib.GlobalWorkerOptions.workerSrc = (pdfWorker as any).default;
     })
     .catch(error => {
       console.error("Failed to load PDF.js worker dynamically, falling back to CDN.", error);
-      // Fallback to CDN if dynamic import fails or for simpler setups without specific bundler configs
-      // Ensure the version in CDN matches your installed pdfjs-dist version
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
     });
 }
-
 
 export default function RuleSenseAppPage() {
   const [analysisResult, setAnalysisResult] = useState<RuleSenseOutput | null>(null);
@@ -138,13 +132,10 @@ export default function RuleSenseAppPage() {
   };
 
   const readPdfAsText = async (file: File): Promise<string> => {
-    // Ensure worker is loaded, it might take a moment after page load
     if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Brief wait for worker loading
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) { // Check again
+        await new Promise(resolve => setTimeout(resolve, 100)); 
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
              console.warn("PDF.js worker not yet loaded. PDF parsing might fail or be slow.");
-             // Attempt to set it again if it wasn't, perhaps with CDN as ultimate fallback
-             // This is belt-and-suspenders, ideally the top-level import() handles it.
              pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
         }
     }
@@ -171,10 +162,9 @@ export default function RuleSenseAppPage() {
         }
       };
       reader.onerror = (error) => reject(error);
-      reader.readAsArrayBuffer(file); // Read as ArrayBuffer for PDF.js
+      reader.readAsArrayBuffer(file);
     });
   };
-
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsLoading(true);
@@ -189,7 +179,6 @@ export default function RuleSenseAppPage() {
     let documentContext: string | undefined = undefined;
 
     if (uploadedFile) {
-      console.log("Uploaded File:", uploadedFile.name, uploadedFile.size, uploadedFile.type);
       if (uploadedFile.type === "text/plain") {
         try {
           documentContext = await readFileAsText(uploadedFile);
@@ -207,7 +196,6 @@ export default function RuleSenseAppPage() {
           documentContext = `Content of document: ${uploadedFile.name} (Error parsing content)`;
         }
       } else { 
-        // For DOC, DOCX, XML - send filename placeholder
         documentContext = `Content of document: ${uploadedFile.name}`;
       }
     }
@@ -230,6 +218,12 @@ export default function RuleSenseAppPage() {
     }
   };
 
+  const isResultSectionNotEmpty = (items: string[] | undefined): boolean => {
+    if (!items || items.length === 0) return false;
+    if (items.length === 1 && items[0].toLowerCase().startsWith("n/a")) return false;
+    return true;
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -239,8 +233,8 @@ export default function RuleSenseAppPage() {
             RuleSense AI Assistant
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Describe your scenario or ask a question about an uploaded document. 
-            You can drag & drop or upload a document (TXT, PDF, DOC, DOCX, XML) for context.
+            Describe your scenario, ask about an uploaded document, or request a new policy.
+            Drag & drop or upload a document (TXT, PDF, DOC, DOCX, XML) for context.
           </p>
         </AnimatedSection>
 
@@ -262,11 +256,11 @@ export default function RuleSenseAppPage() {
                 name="scenario"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel htmlFor="scenario" className="text-lg">Your Scenario / Question about the Document</FormLabel>
+                    <FormLabel htmlFor="scenario" className="text-lg">Your Scenario / Question / Policy Request</FormLabel>
                     <FormControl>
                       <Textarea
                         id="scenario"
-                        placeholder="e.g., 'I am launching a new fintech app...' OR 'What are the key data retention policies mentioned in the uploaded document?'"
+                        placeholder="e.g., 'I am launching a new fintech app handling user data, what are my compliance obligations?' OR 'What are the key data retention policies mentioned in the uploaded document?' OR 'Draft a data privacy policy for a small e-commerce business.'"
                         rows={6}
                         className="text-base"
                         {...field}
@@ -289,7 +283,7 @@ export default function RuleSenseAppPage() {
                   <UploadCloud className={cn("mx-auto h-12 w-12", dragging ? "text-primary" : "text-muted-foreground/70")} />
                   <p className="mt-4 text-sm text-muted-foreground">
                     <span className={cn("font-semibold", dragging ? "text-primary" : "text-accent")}>
-                      {dragging ? "Drop file to attach" : "Drag & drop document or click to upload"}
+                      {dragging ? "Drop file to attach" : "Drag & drop document or click to upload (Optional)"}
                     </span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">TXT, PDF, DOC, DOCX, XML (Max 5MB)</p>
@@ -304,9 +298,9 @@ export default function RuleSenseAppPage() {
                 onChange={handleFileInputChange}
                 accept=".doc,.docx,.pdf,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/xml,text/xml,.txt,text/plain"
               />
-              {fileError && !uploadedFile && <p className="mt-2 text-sm text-destructive">{fileError}</p>} {/* Show general file error only if no file is active */}
+              {fileError && !uploadedFile && <p className="mt-2 text-sm text-destructive">{fileError}</p>}
               
-              {uploadedFile && ( /* This block will show if a file is uploaded, potentially with an error related to it */
+              {uploadedFile && (
                 <AnimatedSection className="mt-4">
                   <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
                     <div className="flex items-center gap-2">
@@ -329,10 +323,9 @@ export default function RuleSenseAppPage() {
                       <XCircle className="h-5 w-5" />
                     </Button>
                   </div>
-                   {fileError && <p className="mt-2 text-xs text-destructive">{fileError}</p>} {/* Show file-specific error here */}
+                   {fileError && <p className="mt-2 text-xs text-destructive">{fileError}</p>}
                 </AnimatedSection>
               )}
-
 
               <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -383,7 +376,7 @@ export default function RuleSenseAppPage() {
               </CardContent>
             </Card>
 
-            {analysisResult.documentSummary && (
+            {analysisResult.documentSummary && analysisResult.documentSummary.trim() !== "" && (
               <Card className="rounded-xl shadow-lg bg-secondary/50">
                 <CardContent className="p-6">
                   <div className="flex items-center mb-3">
@@ -391,6 +384,21 @@ export default function RuleSenseAppPage() {
                     <h3 className="text-xl font-semibold text-foreground">Document Summary / Status</h3>
                   </div>
                   <p className="text-muted-foreground whitespace-pre-wrap">{analysisResult.documentSummary}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysisResult.generatedPolicyDocument && analysisResult.generatedPolicyDocument.trim() !== "" && (
+              <Card className="rounded-xl shadow-lg bg-primary/10 border-primary/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-3">
+                    <FileSignature className="h-6 w-6 text-primary mr-2" />
+                    <h3 className="text-xl font-semibold text-primary">Draft Policy Document</h3>
+                  </div>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{analysisResult.generatedPolicyDocument}</p>
+                   <p className="mt-4 text-xs text-muted-foreground/80">
+                    **Disclaimer:** This is a DRAFT document generated by an AI assistant for informational purposes only. It is NOT a substitute for professional legal advice. Consult with qualified legal counsel to ensure compliance with all applicable laws and regulations before implementation.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -402,12 +410,12 @@ export default function RuleSenseAppPage() {
               </CardContent>
             </Card>
             
-            {analysisResult.complianceChecklist && analysisResult.complianceChecklist.length > 0 && !(analysisResult.complianceChecklist.length === 1 && analysisResult.complianceChecklist[0].toLowerCase().startsWith("n/a")) && (
+            {isResultSectionNotEmpty(analysisResult.complianceChecklist) && (
             <Card className="rounded-xl shadow-lg">
               <CardContent className="p-6">
                  <h3 className="text-xl font-semibold text-foreground mb-3">Compliance Checklist</h3>
                   <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                    {analysisResult.complianceChecklist.map((item, index) => (
+                    {analysisResult.complianceChecklist!.map((item, index) => (
                       <li key={`checklist-${index}`}>{item}</li>
                     ))}
                   </ul>
@@ -415,12 +423,12 @@ export default function RuleSenseAppPage() {
             </Card>
             )}
 
-            {analysisResult.relevantCitations && analysisResult.relevantCitations.length > 0 && !(analysisResult.relevantCitations.length === 1 && analysisResult.relevantCitations[0].toLowerCase().startsWith("n/a")) && (
+            {isResultSectionNotEmpty(analysisResult.relevantCitations) && (
             <Card className="rounded-xl shadow-lg">
               <CardContent className="p-6">
                 <h3 className="text-xl font-semibold text-foreground mb-3">Relevant Citations</h3>
                   <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                    {analysisResult.relevantCitations.map((item, index) => (
+                    {analysisResult.relevantCitations!.map((item, index) => (
                       <li key={`citation-${index}`}>{item}</li>
                     ))}
                   </ul>
@@ -428,13 +436,12 @@ export default function RuleSenseAppPage() {
             </Card>
             )}
 
-
-            {analysisResult.potentialRisks && analysisResult.potentialRisks.length > 0 && !(analysisResult.potentialRisks.length === 1 && analysisResult.potentialRisks[0].toLowerCase().startsWith("n/a")) && (
+            {isResultSectionNotEmpty(analysisResult.potentialRisks) && (
               <Card className="rounded-xl shadow-lg border-amber-500/50 bg-amber-500/10">
                 <CardContent className="p-6">
                   <h3 className="text-xl font-semibold text-amber-700 dark:text-amber-400 mb-3">Potential Risks</h3>
                   <ul className="list-disc space-y-2 pl-5 text-amber-600 dark:text-amber-300">
-                    {analysisResult.potentialRisks.map((item, index) => (
+                    {analysisResult.potentialRisks!.map((item, index) => (
                       <li key={`risk-${index}`}>{item}</li>
                     ))}
                   </ul>
@@ -448,3 +455,4 @@ export default function RuleSenseAppPage() {
     </div>
   );
 }
+
