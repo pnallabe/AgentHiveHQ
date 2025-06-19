@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context'; // Added AuthProvider
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://agenthivehq.com'), // Added metadataBase
   title: 'AgentHiveHQ - Autonomous AI Agents',
   description: 'Powering the Future with Autonomous AI Agents. AgentHiveHQ builds the next generation of AI agent-based products.',
   keywords: "AI agents, autonomous agents, RuleSense, compliance AI, legal tech, AI products, AgentHiveHQ",
