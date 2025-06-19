@@ -12,8 +12,8 @@ export function HeroSection() {
         <Image
           src="https://placehold.co/1920x1080.png"
           alt="Animated particle field or circuit-inspired background"
-          layout="fill"
-          objectFit="cover"
+          fill
+          className="object-cover"
           priority
           data-ai-hint="abstract digital particles"
         />
