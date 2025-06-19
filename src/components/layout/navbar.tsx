@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"; // Added SheetTitle
 import { Menu, RocketIcon, LogOut, LayoutDashboard, LogIn } from "lucide-react";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { usePathname, useRouter } from "next/navigation";
@@ -137,6 +137,7 @@ export function Navbar() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] p-6 flex flex-col">
+                <SheetTitle className="sr-only">Main Menu</SheetTitle> {/* Added visually hidden title */}
                 <div className="mb-6 flex items-center gap-2">
                     <RocketIcon className="h-7 w-7 text-primary" />
                     <span className="text-xl font-bold text-foreground">AgentHiveHQ</span>
