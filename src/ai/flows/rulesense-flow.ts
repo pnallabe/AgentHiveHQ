@@ -22,7 +22,7 @@ const RuleSenseOutputSchema = z.object({
   scenarioSummary: z.string().describe("A brief summary of the AI's understanding of the user's scenario or question."),
   complianceChecklist: z.array(z.string()).describe('A step-by-step compliance checklist (may be N/A if query is document-specific).'),
   relevantCitations: z.array(z.string()).describe('Relevant legal or regulatory citations (may be N/A if query is document-specific).'),
-  actionableGuidance: z.string().describe('Clear, actionable guidance, or the answer to a document-specific question based on its content.'),
+  actionableGuidance: z.string().describe('Clear, actionable guidance, or the answer to a document-specific question based on its content, or the answer to a general query if no document is provided.'),
   potentialRisks: z.array(z.string()).optional().describe('Potential risks or areas of concern (may be N/A if query is document-specific).'),
   documentSummary: z.string().optional().describe('A concise summary of the provided document context. If full content cannot be processed, this will acknowledge the file and state the limitation (e.g., content parsing failed, or file type not yet supported for full content processing).'),
 });
@@ -79,11 +79,11 @@ Your primary goal is to assist users with their regulatory and compliance scenar
   {{{scenarioDescription}}}
 
   **Task**: Provide a comprehensive compliance analysis based on the "User's Scenario".
-  1.  **Output - \`scenarioSummary\`**: Briefly summarize your understanding of the user's situation.
-  2.  **Output - \`complianceChecklist\`**: Generate a detailed, step-by-step checklist of compliance actions.
-  3.  **Output - \`relevantCitations\`**: List key legal acts, regulations, or standards that apply.
-  4.  **Output - \`actionableGuidance\`**: Offer clear advice on how the user should proceed.
-  5.  **Output - \`potentialRisks\` (Optional but Recommended)**: Highlight any potential risks or areas of concern.
+  1.  **Output - \`scenarioSummary\`**: Briefly summarize your understanding of the user's situation or question.
+  2.  **Output - \`complianceChecklist\`**: Generate a detailed, step-by-step checklist of compliance actions relevant to the scenario.
+  3.  **Output - \`relevantCitations\`**: List key legal acts, regulations, or standards that apply to the scenario.
+  4.  **Output - \`actionableGuidance\`**: Provide the answer to the user's query or clear advice on how the user should proceed based on their described scenario.
+  5.  **Output - \`potentialRisks\` (Optional but Recommended)**: Highlight any potential risks or areas of concern related to the scenario.
   6.  **Output - \`documentSummary\`**: Omit this field or leave it empty, as no document was provided.
 {{/if}}
 
@@ -105,3 +105,4 @@ const ruleSenseAnalysisFlow = ai.defineFlow(
     return output;
   }
 );
+
