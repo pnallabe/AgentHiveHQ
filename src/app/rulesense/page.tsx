@@ -11,11 +11,13 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { getRuleSenseAnalysis, type RuleSenseOutput, type RuleSenseInput } from "@/ai/flows/rulesense-flow";
 import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle, FileSearch } from "lucide-react";
 import { AnimatedSection } from "@/components/landing/animated-section";
 import { cn } from "@/lib/utils";
+import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy, TextItem } from 'pdfjs-dist';
 
 const formSchema = z.object({
   scenario: z.string().min(20, { message: "Please describe your scenario or question in at least 20 characters." }).max(5000, { message: "Scenario/question description cannot exceed 5000 characters." }),
@@ -24,6 +26,23 @@ type FormData = z.infer<typeof formSchema>;
 
 const ALLOWED_FILE_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/xml", "text/xml", "text/plain"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Setup PDF.js worker
+// Using a dynamic import for the worker is generally recommended for Next.js/webpack
+if (typeof window !== 'undefined') {
+  // Ensure worker is loaded only on client-side
+  import('pdfjs-dist/build/pdf.worker.mjs')
+    .then(pdfWorker => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = (pdfWorker as any).default;
+    })
+    .catch(error => {
+      console.error("Failed to load PDF.js worker dynamically, falling back to CDN.", error);
+      // Fallback to CDN if dynamic import fails or for simpler setups without specific bundler configs
+      // Ensure the version in CDN matches your installed pdfjs-dist version
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    });
+}
+
 
 export default function RuleSenseAppPage() {
   const [analysisResult, setAnalysisResult] = useState<RuleSenseOutput | null>(null);
@@ -44,7 +63,7 @@ export default function RuleSenseAppPage() {
     if (!file) return true; 
 
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      setFileError(`Invalid file type. Allowed: DOC, DOCX, PDF, XML, TXT. Got: ${file.type}`);
+      setFileError(`Invalid file type. Allowed: PDF, DOC, DOCX, XML, TXT. Got: ${file.type}`);
       return false;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -118,6 +137,45 @@ export default function RuleSenseAppPage() {
     });
   };
 
+  const readPdfAsText = async (file: File): Promise<string> => {
+    // Ensure worker is loaded, it might take a moment after page load
+    if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Brief wait for worker loading
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) { // Check again
+             console.warn("PDF.js worker not yet loaded. PDF parsing might fail or be slow.");
+             // Attempt to set it again if it wasn't, perhaps with CDN as ultimate fallback
+             // This is belt-and-suspenders, ideally the top-level import() handles it.
+             pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (!event.target?.result) {
+          return reject(new Error("Failed to read PDF file."));
+        }
+        try {
+          const typedArray = new Uint8Array(event.target.result as ArrayBuffer);
+          const pdf: PDFDocumentProxy = await pdfjsLib.getDocument({ data: typedArray }).promise;
+          let fullText = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            fullText += textContent.items.map(item => (item as TextItem).str).join(" ") + "\n";
+          }
+          resolve(fullText.trim());
+        } catch (error) {
+          console.error("Error parsing PDF:", error);
+          reject(new Error("Failed to parse PDF content. The file might be corrupted or password-protected."));
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file); // Read as ArrayBuffer for PDF.js
+    });
+  };
+
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsLoading(true);
     setError(null);
@@ -138,9 +196,18 @@ export default function RuleSenseAppPage() {
         } catch (readError) {
           console.error("Error reading text file:", readError);
           setFileError("Could not read the content of the text file.");
-          documentContext = `Content of document: ${uploadedFile.name} (Error reading content)`; // Fallback
+          documentContext = `Error reading content of document: ${uploadedFile.name}`; 
         }
-      } else {
+      } else if (uploadedFile.type === "application/pdf") {
+        try {
+          documentContext = await readPdfAsText(uploadedFile);
+        } catch (parseError) {
+          console.error("Error parsing PDF file:", parseError);
+          setFileError(parseError instanceof Error ? parseError.message : "Could not parse PDF content.");
+          documentContext = `Content of document: ${uploadedFile.name} (Error parsing content)`;
+        }
+      } else { 
+        // For DOC, DOCX, XML - send filename placeholder
         documentContext = `Content of document: ${uploadedFile.name}`;
       }
     }
@@ -237,9 +304,9 @@ export default function RuleSenseAppPage() {
                 onChange={handleFileInputChange}
                 accept=".doc,.docx,.pdf,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/xml,text/xml,.txt,text/plain"
               />
-              {fileError && <p className="mt-2 text-sm text-destructive">{fileError}</p>}
-
-              {uploadedFile && !fileError && (
+              {fileError && !uploadedFile && <p className="mt-2 text-sm text-destructive">{fileError}</p>} {/* Show general file error only if no file is active */}
+              
+              {uploadedFile && ( /* This block will show if a file is uploaded, potentially with an error related to it */
                 <AnimatedSection className="mt-4">
                   <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
                     <div className="flex items-center gap-2">
@@ -262,8 +329,10 @@ export default function RuleSenseAppPage() {
                       <XCircle className="h-5 w-5" />
                     </Button>
                   </div>
+                   {fileError && <p className="mt-2 text-xs text-destructive">{fileError}</p>} {/* Show file-specific error here */}
                 </AnimatedSection>
               )}
+
 
               <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -379,5 +448,3 @@ export default function RuleSenseAppPage() {
     </div>
   );
 }
-
-    
