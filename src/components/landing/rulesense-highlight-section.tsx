@@ -18,12 +18,12 @@ export function RuleSenseHighlightSection() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
           <AnimatedSection className="lg:order-last" initialClassName="opacity-0 lg:translate-x-10" animationClassName="!opacity-100 !lg:translate-x-0">
             <Image
-              src="https://placehold.co/800x600.png"
-              alt="RuleSense Dashboard Preview"
+              src="https://picsum.photos/800/600"
+              alt="RuleSense Dashboard showing AI interacting with human user"
               width={800}
               height={600}
               className="rounded-xl shadow-2xl"
-              data-ai-hint="rulesense dashboard compliance"
+              data-ai-hint="humanoid robot working"
             />
           </AnimatedSection>
           

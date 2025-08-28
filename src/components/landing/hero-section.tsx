@@ -10,12 +10,12 @@ export function HeroSection() {
       <div className="absolute inset-0 z-0 opacity-10 dark:opacity-5">
         {/* Placeholder for animated background */}
         <Image
-          src="https://placehold.co/1920x1080.png"
+          src="https://picsum.photos/1920/1080"
           alt="Animated particle field or circuit-inspired background"
           fill
           className="object-cover"
           priority
-          data-ai-hint="abstract digital particles"
+          data-ai-hint="abstract circuitry"
         />
       </div>
       
@@ -50,12 +50,12 @@ export function HeroSection() {
         <AnimatedSection delay="delay-700" initialClassName="opacity-0 scale-90" animationClassName="!opacity-100 !scale-100">
           <div className="rounded-xl bg-card shadow-2xl">
             <Image
-              src="https://placehold.co/1200x600.png"
-              alt="Futuristic dashboard or AI interface"
+              src="https://picsum.photos/1200/600"
+              alt="Futuristic dashboard showing human-AI collaboration"
               width={1200}
               height={600}
               className="rounded-xl"
-              data-ai-hint="futuristic AI dashboard"
+              data-ai-hint="humanoid robot"
             />
           </div>
         </AnimatedSection>
