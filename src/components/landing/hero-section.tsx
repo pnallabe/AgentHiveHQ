@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -51,11 +52,11 @@ export function HeroSection() {
           <div className="rounded-xl bg-card shadow-2xl">
             <Image
               src="https://picsum.photos/1200/600"
-              alt="Futuristic dashboard showing human-AI collaboration"
+              alt="AI generated image of a human mind with electric circuits"
               width={1200}
               height={600}
               className="rounded-xl"
-              data-ai-hint="humanoid robot"
+              data-ai-hint="human mind circuits"
             />
           </div>
         </AnimatedSection>
