@@ -205,4 +205,6 @@ export function AuditPanel({ audit, decisionId, elapsedMs }: AuditPanelProps) {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>    </div>
+  );
+}
