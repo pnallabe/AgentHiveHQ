@@ -11,8 +11,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth: Auth = getAuth(app);
+// Guard against SSR/build-time initialization when env vars are not available.
+// Firebase is only used in "use client" components, so this is safe.
+let app: FirebaseApp;
+let auth: Auth;
+
+if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+} else {
+  // Stub for SSR / build-time static generation. Real usage is always client-side.
+  app = {} as FirebaseApp;
+  auth = {} as Auth;
+}
 
 export { app, auth };
 
