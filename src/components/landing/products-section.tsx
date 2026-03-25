@@ -1,82 +1,105 @@
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
-import { AnimatedSection } from "./animated-section";
+"use client";
 
-const products = [
+import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
+import { Scale, MessageSquareCode, ShieldCheck } from "lucide-react";
+import { staggerChildren, fadeInUp, defaultViewport } from "@/lib/animations";
+import { cn } from "@/lib/utils";
+
+const PRODUCTS = [
   {
-    name: "RuleSense",
-    description: "RuleSense is an intelligent web application that translates complex regulatory and compliance scenarios into tailored checklists, citations, and guidance—powered entirely by AI agents.",
-    link: "/rulesense",
-    comingSoon: false,
+    icon: Scale,
+    name: "Underwriting Engine",
+    description:
+      "ML-powered credit decisions with income-first modelling for prime, near-prime, and thin-file applicants.",
+    href: "/lab/underwriting",
   },
   {
-    name: "AutoBrief",
-    description: "AI agent that creates executive-ready summaries from lengthy documents.",
-    link: "#",
-    comingSoon: true,
+    icon: MessageSquareCode,
+    name: "AI Copilot",
+    description:
+      "Natural language explanations for every decision. Built for credit analysts, not just engineers.",
+    href: "/lab/copilot",
   },
   {
-    name: "DealScout",
-    description: "An autonomous agent that finds and evaluates business deals and partnerships.",
-    link: "#",
-    comingSoon: true,
+    icon: ShieldCheck,
+    name: "Governance Suite",
+    description:
+      "Immutable audit logs, SHAP explainability, bias monitoring, and FCRA-compliant reason codes.",
+    href: "/lab/governance",
   },
 ];
 
 export function ProductsSection() {
+  const prefersReduced = useReducedMotion();
+
   return (
-    <section id="products" className="bg-secondary">
-      <div className="container mx-auto max-w-7xl px-4">
-        <AnimatedSection className="text-center mb-12 md:mb-16">
-          <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            Our Products
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Discover innovative solutions designed to enhance your capabilities.
+    <section
+      id="products"
+      className="bg-surface-base py-20 md:py-24"
+      aria-labelledby="products-heading"
+    >
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <motion.div
+          variants={fadeInUp}
+          initial={prefersReduced ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={defaultViewport}
+        >
+          <p className="font-mono text-xs uppercase tracking-widest text-brand-400">
+            Products
           </p>
-        </AnimatedSection>
-        
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {products.map((product, index) => (
-            <AnimatedSection key={product.name} delay={`delay-${index * 150}`}>
-              <Card className="flex h-full flex-col overflow-hidden rounded-xl shadow-lg transition-all hover:shadow-2xl hover:scale-[1.02]">
-                <CardHeader>
-                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xl font-semibold">{product.name}</CardTitle>
-                    {product.comingSoon && (
-                      <Badge variant="outline" className="border-accent text-accent">Coming Soon</Badge>
-                    )}
+          <h2
+            id="products-heading"
+            className="mt-2 font-heading text-3xl font-bold tracking-tight text-zinc-50"
+          >
+            Three tools. One credit stack.
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
+            From underwriting to explainability to governance — every layer you need,
+            purpose-built for regulated lending.
+          </p>
+        </motion.div>
+
+        <motion.div
+          className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3"
+          variants={staggerChildren}
+          initial={prefersReduced ? "visible" : "hidden"}
+          whileInView="visible"
+          viewport={defaultViewport}
+        >
+          {PRODUCTS.map((product) => {
+            const Icon = product.icon;
+            return (
+              <motion.div key={product.name} variants={fadeInUp}>
+                <Link
+                  href={product.href}
+                  className={cn(
+                    "group flex flex-col gap-4 rounded-2xl border border-surface-border bg-surface-raised p-6",
+                    "transition-all duration-300",
+                    "hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/5",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  )}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-950 p-2">
+                    <Icon className="h-5 w-5 text-brand-400" aria-hidden />
                   </div>
-                </CardHeader>
-                <CardContent className="flex flex-grow flex-col">
-                  <CardDescription className="mt-3 flex-grow text-base text-muted-foreground">
-                    {product.description}
-                  </CardDescription>
-                </CardContent>
-                <CardFooter className="p-6 pt-0">
-                  <Button 
-                    asChild 
-                    variant={product.comingSoon ? "outline" : "default"} 
-                    className={`w-full ${product.comingSoon ? 'cursor-not-allowed opacity-70' : ''}`}
-                    disabled={product.comingSoon}
-                    aria-disabled={product.comingSoon}
-                  >
-                    {product.comingSoon ? (
-                      <span>Learn More (Soon)</span>
-                    ) : (
-                      <Link href={product.link}>
-                        Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </AnimatedSection>
-          ))}
-        </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-base font-semibold text-zinc-100">
+                      {product.name}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+                      {product.description}
+                    </p>
+                  </div>
+                  <span className="text-sm font-medium text-brand-400 group-hover:underline">
+                    Explore →
+                  </span>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </div>
     </section>
   );

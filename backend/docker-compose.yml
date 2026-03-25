@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./agenthive.db}
+      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-INFO}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:9002,http://localhost:3000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      # Mount source for hot-reload during development
+      - .:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - postgres   # Only active in the postgres profile stack
+
+  # ── SQLite-only dev stack (no postgres profile needed) ────────────────────
+  api-sqlite:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DATABASE_URL=sqlite+aiosqlite:///./agenthive.db
+      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-INFO}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:9002,http://localhost:3000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - .:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── PostgreSQL (optional — switch DATABASE_URL to use) ────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agenthive
+      POSTGRES_USER: agenthive
+      POSTGRES_PASSWORD: agenthive_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenthive -d agenthive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    profiles:
+      - postgres  # Only starts with: docker compose --profile postgres up
+
+volumes:
+  pgdata:
+

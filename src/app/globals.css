@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Geist Mono — loaded via next/font/local from the geist npm package */
+@font-face {
+  font-family: 'Geist Mono';
+  src: local('GeistMono'), url('/_next/static/fonts/GeistMono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Metric ticker scroll animation */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker-scroll 28s linear infinite;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* JSON typewriter cursor blink */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* Focus ring utility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base;
+}
+
+/* Confidence arc animation is handled via framer-motion in components */
+
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
