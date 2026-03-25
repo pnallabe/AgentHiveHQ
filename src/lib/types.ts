@@ -153,6 +153,58 @@ export interface BiasReport {
 }
 
 // ---------------------------------------------------------------------------
+// External Integration Gateway (Phase 4)
+// ---------------------------------------------------------------------------
+
+export type HealthStatus = "healthy" | "degraded" | "down" | "unknown";
+
+export interface DemoScenario {
+  tag: string;
+  label: string;
+  description: string;
+}
+
+/** Lightweight product card returned by GET /api/integrations */
+export interface ProductSummary {
+  product_id: string;
+  display_name: string;
+  description: string;
+  category: string;
+  copilot_enabled: boolean;
+  demo_mode_supported: boolean;
+  demo_scenarios: DemoScenario[];
+  health_status: HealthStatus;
+  last_health_check: string | null;
+}
+
+/** Body for POST /api/integrations/{product_id}/invoke */
+export interface InvokeRequest {
+  inputs: Record<string, unknown>;
+  demo_mode: boolean;
+  scenario_tag?: string | null;
+}
+
+export interface ExternalAuditBlock {
+  model_version: string;
+  timestamp: string;
+  latency_ms: number;
+}
+
+/** Normalised response from any external product call */
+export interface NormalisedResponse {
+  decision_id: string;
+  decision: string;
+  summary: string;
+  details: Record<string, unknown>;
+  explanations: Record<string, unknown>;
+  reason_codes: string[];
+  audit: ExternalAuditBlock;
+  source: string;
+  product_id: string;
+  raw_extra: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
 // RFC 7807 Problem Detail (error shape from FastAPI)
 // ---------------------------------------------------------------------------
 

@@ -22,6 +22,9 @@ import type {
   UnderwritingRequest,
   UnderwritingResponse,
   ProblemDetail,
+  ProductSummary,
+  InvokeRequest,
+  NormalisedResponse,
 } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -220,6 +223,36 @@ export const apiClient = {
 
     biasReport(): Promise<BiasReport> {
       return apiFetch<BiasReport>("/api/governance/bias-report");
+    },
+  },
+
+  integrations: {
+    /** List all registered external products with live health status */
+    list(): Promise<ProductSummary[]> {
+      return apiFetch<ProductSummary[]>("/api/integrations");
+    },
+
+    /** Get a single product summary */
+    get(productId: string): Promise<ProductSummary> {
+      return apiFetch<ProductSummary>(`/api/integrations/${encodeURIComponent(productId)}`);
+    },
+
+    /** Fetch the upstream OpenAPI schema (for dynamic form rendering) */
+    schema(productId: string): Promise<Record<string, unknown>> {
+      return apiFetch<Record<string, unknown>>(
+        `/api/integrations/${encodeURIComponent(productId)}/schema`
+      );
+    },
+
+    /** Invoke an external product via the secure proxy */
+    invoke(productId: string, payload: InvokeRequest): Promise<NormalisedResponse> {
+      return apiFetch<NormalisedResponse>(
+        `/api/integrations/${encodeURIComponent(productId)}/invoke`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
     },
   },
 } as const;

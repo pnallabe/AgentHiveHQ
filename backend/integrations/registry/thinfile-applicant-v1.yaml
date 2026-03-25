@@ -1,0 +1,74 @@
+# AgentHive External Product Manifest
+# ─────────────────────────────────────────────────────────────────────────────
+# Product: ThinFile Applicant Scorer
+# Version: 1.0.0
+#
+# What this product does
+# ----------------------
+# Thin-file applicants have no traditional credit history (credit score=null).
+# This service scores them using alternative signals: cash flow patterns,
+# bank account tenure, deposit stability, and payment history for utilities/rent.
+#
+# How to wire up authentication
+# ─────────────────────────────
+# 1. Set the auth_secret_env_var below (THINFILE_API_KEY is the default).
+# 2. Add the key to your backend .env:
+#      THINFILE_API_KEY=your_secret_key_here
+# 3. The proxy injects it as:  Authorization: Bearer <key>
+#                              X-AgentHive-Key: <key>
+# ─────────────────────────────────────────────────────────────────────────────
+
+product_id: thinfile-applicant-v1
+display_name: ThinFile Applicant Scorer
+description: >
+  ML-powered credit decisioning for thin-file applicants using alternative
+  data signals — cash flow patterns, bank tenure, deposit stability, and
+  rent/utility payment history. Approved for FCRA §615 adverse action
+  code generation.
+category: credit
+
+# ── Routing ──────────────────────────────────────────────────────────────────
+# Replace base_url with your actual ThinFile FastAPI service URL.
+# For local development, use http://localhost:8001 (or ngrok tunnel URL).
+base_url: http://localhost:8001
+health_check_path: /health
+invoke_path: /invoke
+schema_path: /openapi.json
+
+# ── Authentication ────────────────────────────────────────────────────────────
+# auth_type options: none | api_key | oauth2 | mtls
+auth_type: api_key
+auth_secret_env_var: THINFILE_API_KEY
+
+# ── Behaviour ─────────────────────────────────────────────────────────────────
+copilot_enabled: true
+demo_mode_supported: true
+demo_scenarios:
+  - tag: thin_file_strong
+    label: "Strong Thin-File"
+    description: "High cash-flow index, long bank tenure — likely approve"
+  - tag: thin_file_borderline
+    label: "Borderline Thin-File"
+    description: "Moderate signals — review decision expected"
+  - tag: thin_file_high_risk
+    label: "High-Risk Thin-File"
+    description: "Volatile cash flow, short bank tenure — likely reject"
+  - tag: gig_worker_approve
+    label: "Gig Worker — Approvable"
+    description: "Consistent gig income, positive deposit history"
+
+# ── Compliance / governance ───────────────────────────────────────────────────
+# Fields listed here are REDACTED from audit logs before persistence.
+# Never log real SSNs, DOBs, or account numbers.
+pii_fields:
+  - ssn
+  - date_of_birth
+  - account_number
+  - full_name
+  - email
+
+data_residency: us-east-1
+
+# ── SLA ───────────────────────────────────────────────────────────────────────
+timeout_seconds: 30
+rate_limit_rpm: 60

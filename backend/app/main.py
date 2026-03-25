@@ -15,6 +15,9 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.database import create_tables
+from integrations import registry as integration_registry
+from integrations.health_monitor import start_health_monitor, stop_health_monitor
+from integrations.proxy import close_http_client
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 configure_logging(settings.APP_LOG_LEVEL)
@@ -50,10 +53,16 @@ def create_app() -> FastAPI:
         logger.info("Starting AgentHive backend", extra={"env": settings.APP_ENV})
         await create_tables()
         logger.info("Database tables verified / created")
+        # ── Integration gateway ─────────────────────────────────────────
+        integration_registry.load_registry()
+        start_health_monitor()
+        logger.info("Integration gateway initialised")
 
     @application.on_event("shutdown")
     async def _shutdown() -> None:
         logger.info("Shutting down AgentHive backend")
+        await stop_health_monitor()
+        await close_http_client()
 
     # ── Global RFC 7807 exception handler ────────────────────────────────────
     @application.exception_handler(Exception)
@@ -83,10 +92,12 @@ def create_app() -> FastAPI:
     from app.modules.underwriting.api import router as underwriting_router  # noqa: PLC0415
     from app.modules.copilot.api import router as copilot_router  # noqa: PLC0415
     from app.modules.governance.api import router as governance_router  # noqa: PLC0415
+    from integrations.router import router as integrations_router  # noqa: PLC0415
 
     application.include_router(underwriting_router, prefix="/api/underwriting", tags=["Underwriting"])
     application.include_router(copilot_router, prefix="/api/copilot", tags=["Copilot"])
     application.include_router(governance_router, prefix="/api/governance", tags=["Governance"])
+    application.include_router(integrations_router, prefix="/api/integrations", tags=["Integrations"])
 
     return application
 

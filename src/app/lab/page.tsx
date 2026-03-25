@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BrainCircuit, MessageSquare, BarChart3, ArrowRight } from "lucide-react";
+import { BrainCircuit, MessageSquare, BarChart3, ArrowRight, Plug } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PRODUCTS = [
@@ -30,6 +30,15 @@ const PRODUCTS = [
       "Monitor decision patterns, audit trails, approval-rate disparity, and adverse-impact metrics across all segments.",
     Icon: BarChart3,
     iconColor: "text-violet-400",
+    available: true,
+  },
+  {
+    href: "/lab/integrations",
+    title: "Integration Gateway",
+    description:
+      "Connect external FastAPI AI products to the Lab. Live health status, secure proxy invocation, and audit logging for every external decision.",
+    Icon: Plug,
+    iconColor: "text-teal-400",
     available: true,
   },
 ];
