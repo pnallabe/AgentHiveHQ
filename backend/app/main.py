@@ -5,6 +5,11 @@ Entry point for uvicorn:
 """
 from __future__ import annotations
 
+# Load .env into os.environ BEFORE any other imports so that os.getenv()
+# calls in integrations/proxy.py (and elsewhere) see the values.
+from dotenv import load_dotenv
+load_dotenv()  # reads backend/.env (or cwd/.env)
+
 import logging
 from datetime import datetime, timezone
 

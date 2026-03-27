@@ -23,6 +23,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -91,21 +92,23 @@ export function ExplanationPanel({ explanations }: ExplanationPanelProps) {
             SHAP contribution of each factor to this credit decision
           </p>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Learn about SHAP values"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-surface-overlay hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <Info className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="max-w-[220px] border-surface-border bg-surface-overlay text-xs leading-relaxed text-zinc-200">
-            SHAP values show each factor&apos;s contribution. Positive (green) supports approval;
-            negative (red) reduces likelihood.
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Learn about SHAP values"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-surface-overlay hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[220px] border-surface-border bg-surface-overlay text-xs leading-relaxed text-zinc-200">
+              SHAP values show each factor&apos;s contribution. Positive (green) supports approval;
+              negative (red) reduces likelihood.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Legend */}
