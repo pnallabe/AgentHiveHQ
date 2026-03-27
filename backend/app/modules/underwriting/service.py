@@ -27,6 +27,7 @@ from app.modules.underwriting.schemas import (
 )
 from app.shared import feature_engineering, rules_engine
 from app.shared.db_models import AuditLog, DecisionRecord
+from app.shared import loan_portfolio
 
 logger = get_logger(__name__)
 
@@ -280,6 +281,15 @@ class UnderwritingService:
             event_metadata={"elapsed_ms": round(elapsed_ms, 2)},
         )
 
+        # ── Freddie Mac portfolio benchmark (non-blocking) ───────────────────
+        portfolio_ctx: dict | None = None
+        try:
+            portfolio_ctx = await loan_portfolio.get_benchmark_for_applicant(
+                credit_score=request.credit_score,
+            )
+        except Exception as _bq_exc:
+            logger.debug("portfolio benchmark unavailable", extra={"error": str(_bq_exc)})
+
         return UnderwritingResponse(
             decision_id=decision_id,
             decision=decision,
@@ -289,6 +299,7 @@ class UnderwritingService:
             risk_segment=risk_segment,
             reason_codes=reason_codes,
             explanations=shap_values,
+            portfolio_context=portfolio_ctx,
             audit=AuditSummary(
                 timestamp=timestamp,
                 model_version=f"sha256:{_model.artifact_hash[:12]}" if hasattr(_model, 'artifact_hash') and _model.artifact_hash and _model.artifact_hash != 'mock' else model_version,

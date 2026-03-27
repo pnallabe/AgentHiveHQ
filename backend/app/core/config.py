@@ -36,8 +36,19 @@ class Settings(BaseSettings):
         description="Comma-separated list of allowed CORS origins",
     )
 
-    # ── External services ────────────────────────────────────────────────────
-    OPENAI_API_KEY: str = Field(default="", description="OpenAI API key; empty → graceful mock fallback")
+    # ── AI / LLM keys ─────────────────────────────────────────────────────────
+    # Gemini is tried first; OpenAI is the fallback; mock if both are absent.
+    GEMINI_API_KEY: str = Field(default="", description="Google Gemini API key (gemini-2.0-flash). Get one at https://aistudio.google.com/app/apikey")
+    OPENAI_API_KEY: str = Field(default="", description="OpenAI API key (gpt-4o-mini); fallback when GEMINI_API_KEY is unset")
+
+    # ── Google Cloud / BigQuery (primary datasource) ───────────────────────────
+    # Shared with credit-risk-platform — points at the Freddie Mac SFLLD dataset.
+    GCP_PROJECT_ID: str = Field(default="ai-risk-workflow", description="GCP project that hosts the BigQuery datasets")
+    BQ_DATASET: str = Field(default="freddie_mac_sflld", description="BigQuery dataset containing Freddie Mac SFLLD origination + performance tables")
+    GCP_CREDENTIALS_PATH: str = Field(
+        default="",
+        description="Path to a GCP service-account JSON key file.  Leave blank to use ADC / Cloud Run identity.",
+    )
 
     @field_validator("APP_ENV")
     @classmethod

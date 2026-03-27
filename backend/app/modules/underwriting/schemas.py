@@ -117,6 +117,13 @@ class UnderwritingResponse(BaseModel):
         description="SHAP feature contributions; positive = supports approval",
     )
     audit: AuditSummary = Field(..., description="Provenance and audit metadata")
+    portfolio_context: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Applicant benchmarked against Freddie Mac SFLLD portfolio (2015–2024, 15.9 M loans). "
+            "Includes credit-score percentile, peer default rate, and population benchmarks."
+        ),
+    )
 
 
 # ── History / pagination ──────────────────────────────────────────────────────

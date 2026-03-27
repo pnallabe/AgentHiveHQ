@@ -3,8 +3,9 @@
 Story 3.5: POST /api/copilot/explain
 
 Architecture:
-  1. Try OpenAI gpt-4o-mini if OPENAI_API_KEY is configured.
-  2. On failure or missing key → return deterministic mock narrative.
+  1. Try Google Gemini (gemini-2.0-flash) if GEMINI_API_KEY is configured.
+  2. Try OpenAI gpt-4o-mini if OPENAI_API_KEY is configured (fallback).
+  3. On failure or missing keys → return deterministic mock narrative.
 
 The mock response passes the same schema validation as the LLM response
 and contains only values sourced from the decision input (no hallucination).
@@ -16,6 +17,7 @@ import os
 from typing import Any
 
 from app.core.config import settings
+from app.shared import loan_portfolio
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,7 @@ class CopilotService:
         self,
         decision_response: dict[str, Any],
         applicant_context: str = "",
+        portfolio_context: dict[str, Any] | None = None,
     ) -> CopilotResponse:
         """Generate a narrative for the given underwriting decision.
 
@@ -71,10 +74,27 @@ class CopilotService:
         Returns:
             ``CopilotResponse`` — either LLM-generated or deterministic mock.
         """
+        # Fetch portfolio benchmarks if not already provided by the caller
+        if portfolio_context is None:
+            try:
+                portfolio_context = decision_response.get("portfolio_context") or await loan_portfolio.get_population_benchmarks()
+            except Exception:
+                portfolio_context = None
+
+        gemini_key = getattr(settings, "GEMINI_API_KEY", None) or os.environ.get("GEMINI_API_KEY", "")
+        if gemini_key:
+            try:
+                return await self._call_gemini(decision_response, applicant_context, gemini_key, portfolio_context)
+            except Exception as exc:
+                logger.warning(
+                    "Gemini copilot call failed — trying OpenAI fallback",
+                    extra={"error": str(exc), "copilot_source": "gemini_error"},
+                )
+
         openai_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", "")
         if openai_key:
             try:
-                return await self._call_openai(decision_response, applicant_context, openai_key)
+                return await self._call_openai(decision_response, applicant_context, openai_key, portfolio_context)
             except Exception as exc:
                 logger.warning(
                     "OpenAI copilot call failed — falling back to mock",
@@ -84,6 +104,97 @@ class CopilotService:
         logger.info("copilot_source=mock")
         return self._build_mock(decision_response)
 
+    # ── Gemini path ───────────────────────────────────────────────────────────
+
+    async def _call_gemini(
+        self,
+        dr: dict[str, Any],
+        applicant_context: str,
+        api_key: str,
+        portfolio_context: dict[str, Any] | None = None,
+    ) -> CopilotResponse:
+        """Call gemini-2.0-flash via google-generativeai SDK."""
+        import json
+        import google.generativeai as genai  # pip install google-generativeai
+
+        genai.configure(api_key=api_key)
+
+        decision = dr.get("decision", "unknown")
+        credit_limit = dr.get("credit_limit")
+        apr = dr.get("apr")
+        risk_segment = dr.get("risk_segment", "unknown")
+        reason_codes = dr.get("reason_codes", [])
+        confidence_score = dr.get("confidence_score", 0)
+
+        reason_text = ", ".join(
+            rc.get("description", rc.get("code", "")) if isinstance(rc, dict) else str(rc)
+            for rc in reason_codes
+        ) or "No specific adverse factors."
+
+        credit_limit_str = "${:,.0f}".format(credit_limit) if credit_limit else "N/A"
+        apr_str = f"{apr:.2f}%" if apr else "N/A"
+        context_line = f"- Applicant Context: {applicant_context}" if applicant_context else ""
+
+        # Build portfolio benchmark context block for the prompt
+        portfolio_block = ""
+        if portfolio_context:
+            cs_bench = portfolio_context.get("credit_score") or (portfolio_context.get("population_benchmarks") or {}).get("credit_score", {})
+            peer_default = portfolio_context.get("peer_default_rate")
+            cs_pct = portfolio_context.get("credit_score_percentile", "")
+            if cs_bench or peer_default:
+                portfolio_block = (
+                    f"\nFreddie Mac Market Benchmarks (15.9M loans, 2015–2024):\n"
+                    f"- Population median credit score: {cs_bench.get('median', 'N/A')}\n"
+                    + (f"- Peer 90-day default rate for this credit band: {peer_default:.2%}\n" if peer_default is not None else "")
+                    + (f"- Applicant credit score percentile: {cs_pct}\n" if cs_pct else "")
+                )
+
+        prompt = f"""You are a credit analyst at a regulated consumer lending institution.
+Explain this credit decision clearly, empathetically, and in FCRA-compliant language.
+Never hallucinate numbers or facts not in the data below.
+
+Credit Decision Summary:
+- Decision: {decision.upper()}
+- Risk Segment: {risk_segment}
+- Credit Limit: {credit_limit_str}
+- APR: {apr_str}
+- Confidence: {confidence_score:.0%}
+- Reason Factors: {reason_text}
+{context_line}{portfolio_block}
+
+Respond with ONLY valid JSON (no markdown) with exactly these keys:
+{{
+  "narrative": "exactly 3 sentences explaining the decision clearly and empathetically",
+  "risk_flags": ["up to 3 specific risk factors from the data above"],
+  "recommendations": ["up to 3 concrete actions the applicant can take"],
+  "plain_english_apr": "For every $1,000 balance, you'd pay approximately $X.XX/month in interest"
+}}"""
+
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            generation_config=genai.GenerationConfig(
+                temperature=0.3,
+                max_output_tokens=500,
+                response_mime_type="application/json",
+            ),
+        )
+
+        # Gemini SDK is sync — run in thread to avoid blocking the event loop
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None, lambda: model.generate_content(prompt)
+        )
+
+        data = json.loads(response.text)
+        logger.info("copilot_source=gemini")
+        return CopilotResponse(
+            narrative=str(data.get("narrative", ""))[:600],
+            risk_flags=list(data.get("risk_flags", []))[:3],
+            recommendations=list(data.get("recommendations", []))[:3],
+            plain_english_apr=str(data.get("plain_english_apr", self._apr_text(apr))),
+        )
+
     # ── OpenAI path ───────────────────────────────────────────────────────────
 
     async def _call_openai(
@@ -91,6 +202,7 @@ class CopilotService:
         dr: dict[str, Any],
         applicant_context: str,
         api_key: str,
+        portfolio_context: dict[str, Any] | None = None,
     ) -> CopilotResponse:
         """Call gpt-4o-mini with a structured system + user prompt."""
         import openai
@@ -107,6 +219,20 @@ class CopilotService:
             for rc in reason_codes
         ) or "No specific adverse factors."
 
+        # Portfolio benchmark supplement
+        portfolio_block = ""
+        if portfolio_context:
+            cs_bench = portfolio_context.get("credit_score") or (portfolio_context.get("population_benchmarks") or {}).get("credit_score", {})
+            peer_default = portfolio_context.get("peer_default_rate")
+            cs_pct = portfolio_context.get("credit_score_percentile", "")
+            if cs_bench or peer_default:
+                portfolio_block = (
+                    f"\nFreddie Mac Market Benchmarks (15.9M loans, 2015–2024):\n"
+                    f"- Population median credit score: {cs_bench.get('median', 'N/A')}\n"
+                    + (f"- Peer 90-day default rate for this credit band: {peer_default:.2%}\n" if peer_default is not None else "")
+                    + (f"- Applicant credit score percentile: {cs_pct}\n" if cs_pct else "")
+                )
+
         system_prompt = (
             "You are a credit analyst at a regulated consumer lending institution. "
             "You explain credit decisions to applicants in a clear, empathetic, and "
@@ -115,14 +241,18 @@ class CopilotService:
             "If the decision is a rejection, always include an actionable improvement path."
         )
 
+        credit_limit_str2 = "${:,.0f}".format(credit_limit) if credit_limit else "N/A"
+        apr_str2 = f"{apr:.2f}%" if apr else "N/A"
+        context_line2 = f"- Applicant Context: {applicant_context}" if applicant_context else ""
+
         user_prompt = f"""Credit Decision Summary:
 - Decision: {decision.upper()}
 - Risk Segment: {risk_segment}
-- Credit Limit: {"${:,.0f}".format(credit_limit) if credit_limit else "N/A"}
-- APR: {f"{apr:.2f}%" if apr else "N/A"}
+- Credit Limit: {credit_limit_str2}
+- APR: {apr_str2}
 - Confidence: {confidence_score:.0%}
 - Reason Factors: {reason_text}
-{f"- Applicant Context: {applicant_context}" if applicant_context else ""}
+{context_line2}{portfolio_block}
 
 Provide:
 1. narrative: exactly 3 sentences explaining this decision clearly and empathetically

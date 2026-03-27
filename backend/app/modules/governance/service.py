@@ -15,6 +15,7 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.db_models import DecisionRecord
+from app.shared import loan_portfolio
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +179,13 @@ class GovernanceDashboardService:
             for r in day_rows
         ]
 
+        # ── Freddie Mac portfolio benchmarks (non-blocking) ──────────────────
+        portfolio_benchmarks: dict | None = None
+        try:
+            portfolio_benchmarks = await loan_portfolio.get_population_benchmarks()
+        except Exception as _bq_exc:
+            logger.debug("portfolio benchmarks unavailable", extra={"error": str(_bq_exc)})
+
         return {
             "period":                    period,
             "total_decisions":           total,
@@ -189,6 +197,7 @@ class GovernanceDashboardService:
             "rules_triggered_frequency": rules_counts,
             "top_reason_codes":          top_reason_codes,
             "approval_rate_by_day":      approval_rate_by_day,
+            "portfolio_benchmarks":      portfolio_benchmarks,
         }
 
     # ── Bias report ───────────────────────────────────────────────────────────
@@ -276,4 +285,5 @@ class GovernanceDashboardService:
             "rules_triggered_frequency": {},
             "top_reason_codes":          [],
             "approval_rate_by_day":      [],
+            "portfolio_benchmarks":      None,
         }
