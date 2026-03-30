@@ -59,6 +59,7 @@ export default function CopilotPage() {
       const copilotOut = await getCreditCopilotNarrative({
         decision_response: result as Parameters<typeof getCreditCopilotNarrative>[0]["decision_response"],
         applicant_context: demoMode ? "Demo mode session" : "",
+        apr_monthly_cost: "",  // computed & overridden inside getCreditCopilotNarrative
       });
       // Map to CopilotResponse shape expected by CopilotNarrative
       setCopilotResponse({

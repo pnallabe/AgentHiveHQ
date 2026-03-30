@@ -10,11 +10,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['Space Grotesk', 'sans-serif'],
-        body:    ['Inter', 'Space Grotesk', 'sans-serif'],
-        mono:    ['var(--font-geist-mono)', 'Geist Mono', 'ui-monospace', 'monospace'],
-        // Keep legacy aliases
-        headline: ['Space Grotesk', 'sans-serif'],
+        heading:  ['var(--font-space-grotesk)', 'Space Grotesk', 'sans-serif'],
+        body:     ['var(--font-inter)', 'Inter', 'sans-serif'],
+        mono:     ['var(--font-geist-mono)', 'Geist Mono', 'ui-monospace', 'monospace'],
+        // Legacy aliases kept for backward compatibility
+        headline: ['var(--font-space-grotesk)', 'Space Grotesk', 'sans-serif'],
         code:     ['var(--font-geist-mono)', 'Geist Mono', 'ui-monospace', 'monospace'],
       },
       colors: {

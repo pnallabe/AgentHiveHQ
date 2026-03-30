@@ -12,8 +12,9 @@ export function generateStaticParams() {
   return CASE_STUDIES.map((cs) => ({ slug: cs.slug }));
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const cs = getCaseStudy(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const cs = getCaseStudy(slug);
   if (!cs) return {};
   return {
     title: `${cs.title} — AgentHive`,
@@ -87,12 +88,13 @@ function Section({ section }: { section: CaseStudySection }) {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function CaseStudyDetailPage({
+export default async function CaseStudyDetailPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const cs = getCaseStudy(params.slug);
+  const { slug } = await params;
+  const cs = getCaseStudy(slug);
   if (!cs) notFound();
 
   // Prev / next for navigation

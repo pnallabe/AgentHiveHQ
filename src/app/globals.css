@@ -119,9 +119,8 @@
     @apply bg-background text-foreground;
     scroll-behavior: smooth;
   }
-  section {
-    @apply py-16 md:py-24 lg:py-32;
-  }
+  /* NOTE: section padding is applied per-component, not globally,
+     to avoid specificity conflicts with Tailwind utility overrides. */
 }
 
 /* For AnimatedSection component */

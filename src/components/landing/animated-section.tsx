@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import React, { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type AnimatedSectionProps = {
   children: ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
   initialClassName?: string;
   animationClassName?: string;
   threshold?: number;
@@ -25,7 +25,7 @@ export function AnimatedSection({
   duration = "duration-700"
 }: AnimatedSectionProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -54,7 +54,7 @@ export function AnimatedSection({
 
   return (
     <Element
-      ref={sectionRef}
+      ref={sectionRef as never}
       className={cn(
         "transition-all ease-in-out",
         duration,

@@ -1,15 +1,32 @@
 
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+
+function resolveGoogleError(err: any): string {
+  switch (err?.code) {
+    case "auth/unauthorized-domain":
+      return `This domain is not authorized for Google sign-in. Go to Firebase Console → Authentication → Settings → Authorized domains and add "${typeof window !== "undefined" ? window.location.hostname : "your domain"}" to the list.`;
+    case "auth/operation-not-allowed":
+      return "Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.";
+    case "auth/popup-blocked":
+      return "The sign-in popup was blocked by your browser. Please allow popups for this site and try again.";
+    case "auth/cancelled-popup-request":
+    case "auth/popup-closed-by-user":
+      return "";
+    default:
+      return `Google sign-in failed${err?.code ? ` (${err.code})` : ""}. Please try again.`;
+  }
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +88,24 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
 
+  // Handle redirect result from Google sign-in
+  useEffect(() => {
+    setGoogleLoading(true);
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          router.push("/dashboard");
+        } else {
+          setGoogleLoading(false);
+        }
+      })
+      .catch((err: any) => {
+        setGoogleLoading(false);
+        const msg = resolveGoogleError(err);
+        if (msg) setError(msg);
+      });
+  }, [router]);
+
   // Email login
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
@@ -96,20 +131,18 @@ export default function LoginPage() {
     }
   };
 
-  // Google OAuth
+  // Google OAuth — uses redirect flow (more reliable than popup across browsers)
   const handleGoogle = async () => {
     setError(null);
     setGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
+      await signInWithRedirect(auth, provider);
+      // Browser will redirect away; code below only runs on error
     } catch (err: any) {
-      if (err.code !== "auth/popup-closed-by-user") {
-        setError("Google sign-in failed. Please try again.");
-      }
-    } finally {
       setGoogleLoading(false);
+      const msg = resolveGoogleError(err);
+      if (msg) setError(msg);
     }
   };
 

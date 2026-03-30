@@ -6,11 +6,14 @@ import { motion, useReducedMotion } from "framer-motion";
 import { fadeInUp, defaultViewport } from "@/lib/animations";
 import { ArrowRight, BookOpen } from "lucide-react";
 
+// ── Config ──────────────────────────────────────────────────────────────────
+const DEMO_BOOKING_URL = "https://calendly.com/agenthivehq/demo";
+
 export function ContactSection() {
   const prefersReduced = useReducedMotion();
 
   return (
-    <section id="contact" className="bg-surface-base px-4 pb-16 pt-0">
+    <section id="contact" className="bg-surface-base px-4 py-16 md:py-20">
       <div className="mx-auto max-w-6xl">
         {/* Detached card */}
         <motion.div
@@ -34,10 +37,10 @@ export function ContactSection() {
               size="lg"
               className="h-11 bg-brand-500 px-6 text-white hover:bg-brand-600 focus-visible:ring-brand-500"
             >
-              <Link href="/#contact">
+              <a href={DEMO_BOOKING_URL}>
                 Book a Demo
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </Link>
+              </a>
             </Button>
             <Button
               asChild

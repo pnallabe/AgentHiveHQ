@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowRight } from "lucide-react";
@@ -142,6 +143,36 @@ export function HeroSection() {
             </p>
           </MotionDiv>
         </div>
+
+        {/* Dashboard preview illustration */}
+        <MotionDiv
+          variants={fadeInUp}
+          initial={prefersReduced ? "visible" : "hidden"}
+          animate="visible"
+          style={{ transitionDelay: prefersReduced ? "0ms" : "0.65s" }}
+          className="mt-16 w-full max-w-5xl px-4"
+        >
+          <div className="relative mx-auto overflow-hidden rounded-2xl border border-surface-border shadow-2xl shadow-brand-900/20">
+            <Image
+              src="/images/dashboard-preview.svg"
+              alt="AgentHive underwriting dashboard showing approved decision, risk score 0.76, and SHAP feature importance chart"
+              width={900}
+              height={480}
+              priority
+              className="w-full h-auto"
+              style={{ display: "block" }}
+            />
+            {/* Scanline gloss overlay */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-2xl"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 60%)",
+              }}
+            />
+          </div>
+        </MotionDiv>
       </div>
 
       {/* Metric ticker strip */}

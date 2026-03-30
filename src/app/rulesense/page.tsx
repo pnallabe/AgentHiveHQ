@@ -17,7 +17,9 @@ import { Loader2, AlertTriangle, UploadCloud, FileText, XCircle, FileSearch, Fil
 import { AnimatedSection } from "@/components/landing/animated-section";
 import { cn } from "@/lib/utils";
 import * as pdfjsLib from 'pdfjs-dist';
-import type { PDFDocumentProxy, TextItem } from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+// pdfjs-dist v4 does not re-export TextItem at the package root; define locally.
+type TextItem = { str: string; [key: string]: unknown };
 
 const formSchema = z.object({
   scenario: z.string().min(20, { message: "Please describe your scenario, question, or policy request in at least 20 characters." }).max(5000, { message: "Input cannot exceed 5000 characters." }),

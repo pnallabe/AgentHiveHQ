@@ -37,7 +37,8 @@ export default function UnderwritingPage() {
 
   const isLoading = outputState.status === "loading";
   const result = outputState.status === "result" ? outputState.result : null;
-  const elapsedMs = outputState.status === "result" ? outputState.elapsedMs : undefined;
+  // coerce null → undefined so AuditPanel's elapsedMs?: number is satisfied
+  const elapsedMs = outputState.status === "result" ? (outputState.elapsedMs ?? undefined) : undefined;
 
   return (
     <div className="space-y-4">

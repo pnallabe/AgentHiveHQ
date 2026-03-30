@@ -57,51 +57,56 @@ export function HowItWorksSection() {
           >
             How It Works
           </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-zinc-400">
+            Four deterministic stages. Every decision is traceable, explainable, and under 500ms.
+          </p>
         </motion.div>
 
         <motion.div
-          className="relative mt-14"
+          className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-4"
           variants={staggerChildren}
           initial={prefersReduced ? "visible" : "hidden"}
           whileInView="visible"
           viewport={defaultViewport}
         >
-          {/* Connector line — desktop only */}
-          <div
-            aria-hidden
-            className="absolute left-0 right-0 top-8 hidden h-px border-t border-dashed border-surface-border md:block"
-            style={{ top: "32px" }}
-          />
-
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-            {STEPS.map((step, idx) => {
-              const Icon = step.icon;
-              return (
-                <motion.div
-                  key={step.number}
-                  variants={fadeInUp}
-                  className="relative flex flex-col items-center text-center md:items-start md:text-left"
-                >
-                  {/* Number pill + icon */}
-                  <div className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-surface-border bg-surface-base">
+          {STEPS.map((step, idx) => {
+            const Icon = step.icon;
+            const isLast = idx === STEPS.length - 1;
+            return (
+              <motion.div
+                key={step.number}
+                variants={fadeInUp}
+                className="relative flex flex-col"
+              >
+                {/* Step header: icon + connector line */}
+                <div className="flex items-center gap-3 md:flex-col md:items-start md:gap-0">
+                  {/* Icon circle */}
+                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-surface-border bg-surface-base">
                     <Icon className="h-5 w-5 text-brand-400" aria-hidden />
-                  </div>
-                  <div className="absolute -top-2 left-10 z-10 font-mono text-[10px] text-brand-400 md:left-auto md:-top-0 md:right-0">
-                    {step.number}
+                    {/* Step number badge */}
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500 font-mono text-[9px] font-bold text-white">
+                      {idx + 1}
+                    </span>
                   </div>
 
-                  <div className="mt-4">
-                    <h3 className="font-heading text-base font-semibold text-zinc-100">
-                      {step.heading}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                      {step.description}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                  {/* Connector line between steps (mobile: vertical gap, desktop: replaced by border) */}
+                  {!isLast && (
+                    <div className="hidden h-px flex-1 border-t border-dashed border-surface-border md:block md:ml-0 md:mt-6 md:w-full" />
+                  )}
+                </div>
+
+                {/* Step body */}
+                <div className="mt-4 pl-0">
+                  <h3 className="font-heading text-base font-semibold text-zinc-100">
+                    {step.heading}
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+                    {step.description}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </section>

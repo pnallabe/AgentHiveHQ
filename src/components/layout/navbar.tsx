@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/#products",     label: "Products"       },
   { href: "/#how-it-works", label: "Platform"       },
   { href: "/case-studies",  label: "Case Studies"   },
+  { href: "/#pricing",      label: "Pricing"        },
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────
