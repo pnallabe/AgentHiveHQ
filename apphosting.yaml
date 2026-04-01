@@ -1,3 +1,8 @@
+# RETIRED — Firebase App Hosting is no longer used.
+# The frontend is now deployed to Google Cloud Run via cloudbuild-frontend.yaml.
+# Firebase Hosting (firebase.json) acts as CDN in front of Cloud Run.
+# This file is kept for reference only and has no effect.
+#
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 

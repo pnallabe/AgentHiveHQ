@@ -2695,3 +2695,430 @@ When a new external AI product is onboarded, complete this checklist before it r
 [ ] Smoke test: one live request + one demo request end-to-end, audit trail verified
 [ ] Governance dashboard includes this product's decision history
 ```
+
+---
+
+## 16. FIREBASE STUDIO RETIREMENT — HOSTING MIGRATION
+
+> **Context**: Firebase Studio (which manages Firebase App Hosting) is being retired. The platform currently deploys via `apphosting.yaml` and depends on Firebase App Hosting for the Next.js frontend runtime. **Firebase Auth, Firestore, and Secret Manager are unaffected** — only the hosting layer must change.
+>
+> **Goal**: Migrate the Next.js 15 App Router frontend to a low-cost, low-effort alternative with minimal code changes. Firebase Auth stays. Genkit AI flows stay. The backend FastAPI service (Docker) stays on its separate infra.
+
+---
+
+### 16.1 What Is and Is Not Changing
+
+| Layer | Current | After Migration | Code Change Required |
+|---|---|---|---|
+| Frontend runtime | Firebase App Hosting (`apphosting.yaml`) | New host (see §16.2) | Remove `apphosting.yaml`; add host config |
+| Firebase Auth | Firebase SDK (`firebase` v11) | **Unchanged — stays as-is** | None |
+| Genkit AI flows | Server Actions via `@genkit-ai/next` | **Unchanged — stays as-is** | None |
+| Env secrets | Firebase Secret Manager (`NEXT_PUBLIC_*` vars) | Host env-var UI | Copy values to new host dashboard |
+| FastAPI backend | Docker on Cloud Run / Fly.io | **Unchanged** | None |
+| Domain / custom DNS | Firebase Hosting domain | Remap DNS CNAME to new host | DNS update only |
+
+**Migration philosophy**: Swap only the compute layer that runs `next start`. Touch zero application code. The entire `apphosting.yaml` is the only Firebase-specific hosting artifact.
+
+---
+
+### 16.2 Recommended Options (Ranked by Effort + Cost)
+
+#### Option A — Vercel ⭐ RECOMMENDED (Least Effort)
+
+**Why**: Vercel is built by the Next.js team. Zero-config support for Next.js 15 App Router, Turbopack, and server actions. Import the GitHub repo and it deploys in one click.
+
+| Attribute | Detail |
+|---|---|
+| Cost | Free tier: 100 GB bandwidth, 1 concurrent build. Pro: $20/mo |
+| Migration effort | ~30 minutes |
+| Next.js 15 support | Native — no adapter needed |
+| Server Actions / Genkit | Fully supported (Node.js Vercel Functions) |
+| Env vars | Dashboard → Settings → Environment Variables |
+| Custom domain | Free SSL + CNAME in dashboard |
+| Firebase Auth compat | Full — no code changes |
+| Cold starts | < 50 ms |
+
+**Migration steps:**
+
+```
+1. Push repo to GitHub (if not already)
+2. vercel.com → "Add New Project" → Import repo
+3. Framework preset: Next.js (auto-detected)
+4. Copy all env vars from Firebase Secret Manager → Vercel Environment Variables:
+     NEXT_PUBLIC_FIREBASE_API_KEY
+     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+     NEXT_PUBLIC_FIREBASE_PROJECT_ID
+     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+     NEXT_PUBLIC_FIREBASE_APP_ID
+     GOOGLE_GENAI_API_KEY       (server-side only — no NEXT_PUBLIC_ prefix)
+     NEXT_PUBLIC_API_URL        (points to FastAPI backend URL)
+5. Click Deploy — first build runs automatically
+6. Update custom domain DNS: CNAME record → cname.vercel-dns.com
+7. Delete or archive apphosting.yaml (it is inert on Vercel)
+```
+
+**Cost**: $0/mo on Hobby tier for demo/early-stage traffic. $20/mo Pro if team features or multiple environments are needed.
+
+---
+
+#### Option B — Cloudflare Pages (Lowest Cost at Scale)
+
+**Why**: Unlimited bandwidth on the free tier. Best choice if public traffic grows significantly. Requires a lightweight adapter.
+
+| Attribute | Detail |
+|---|---|
+| Cost | Free: unlimited bandwidth, 500 builds/month |
+| Migration effort | ~2–3 hours |
+| Next.js 15 support | Via `@cloudflare/next-on-pages` adapter |
+| Genkit compat | Partial — Genkit flows must be Edge-runtime compatible; audit required |
+| Custom domain | Free SSL |
+| Cold starts | < 10 ms (Cloudflare Edge network) |
+
+**Risk**: Genkit's `@genkit-ai/googleai` package uses Node.js APIs that may not be available on the Cloudflare Edge runtime without polyfills (`nodejs_compat` flag). Run a compatibility check before committing:
+
+```bash
+npm install --save-dev @cloudflare/next-on-pages wrangler
+npx @cloudflare/next-on-pages --help
+```
+
+Add to `wrangler.toml`:
+
+```toml
+name = "agenthivehq"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+```
+
+---
+
+#### Option C — Render ($7/mo, Simplest Persistent Node.js Server)
+
+**Why**: Runs a full persistent `next start` Node.js process — no cold-start limitations, no Edge runtime restrictions. Best if Genkit flows need unrestricted Node.js access (file system, native modules).
+
+| Attribute | Detail |
+|---|---|
+| Cost | Free: 750 hrs/mo (sleeps after 15 min idle). Always-on: $7/mo |
+| Migration effort | ~1 hour |
+| Next.js 15 support | Full (`next start`) |
+| Genkit compat | Full — no Node.js restrictions |
+| Deployment | Connect GitHub → set build + start commands in dashboard |
+
+```
+Build command:  npm install && npm run build
+Start command:  npm start
+```
+
+Optional `render.yaml` for infrastructure-as-code:
+
+```yaml
+services:
+  - type: web
+    name: agenthivehq-frontend
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+```
+
+---
+
+#### Option D — Railway (~$5–15/mo, Best Developer Experience)
+
+| Attribute | Detail |
+|---|---|
+| Cost | $5 credit/mo free, then usage-based (~$5–15/mo for light traffic) |
+| Migration effort | ~45 minutes |
+| Next.js 15 support | Full — Nixpacks auto-detects Next.js |
+| Genkit compat | Full |
+| Deployment | GitHub integration, auto-deploy on push |
+| Env vars | Railway Dashboard → Variables tab |
+| Custom domain | Free SSL included |
+
+---
+
+#### Option E — Google Cloud Run ⭐ BEST IF STAYING IN GOOGLE CLOUD
+
+**Why**: Cloud Run is the natural Firebase App Hosting replacement within Google Cloud. Firebase App Hosting runs on Cloud Run internally — this option removes the Firebase Studio abstraction layer and talks directly to Cloud Run. Because the project already uses Firebase Auth, Google Secret Manager, and Genkit (Google AI), staying in the Google Cloud ecosystem means no cross-cloud IAM, no credential duplication, and unified billing.
+
+| Attribute | Detail |
+|---|---|
+| Cost | Free tier: 2M requests/mo, 360,000 GB-seconds RAM, 180,000 vCPU-seconds. Paid: ~$0–5/mo light traffic |
+| Migration effort | ~1–2 hours |
+| Next.js 15 support | Full — runs `next start` in a Docker container |
+| Genkit compat | Full — Node.js 20 container, no restrictions |
+| Secret Manager | Native — mount secrets directly; no copy-paste to a host dashboard |
+| Firebase Auth compat | Full — same Google project, zero config |
+| Deployment | `gcloud run deploy` or Cloud Build CI/CD |
+| Custom domain | Firebase Hosting as CDN in front of Cloud Run (recommended pattern) |
+| Scale to zero | Yes — pay nothing when there is no traffic |
+| Cold starts | 1–3 s on free tier; use min-instances=1 ($6/mo) to eliminate |
+
+**Why this is the lowest-friction Google-native path**:
+- Secret Manager integration is native — secrets are mounted as env vars at runtime, no dashboard copy-paste
+- Same GCP project as Firebase — single IAM, single billing account, single audit log
+- Firebase Hosting acts as a global CDN in front of Cloud Run (handles static assets, custom domain, free SSL)
+- Genkit's `@genkit-ai/googleai` SDK uses ADC (Application Default Credentials) natively on Cloud Run — no `GOOGLE_API_KEY` env var needed if using Workload Identity
+
+**One required code change** — add `output: 'standalone'` to `next.config.ts`:
+
+```typescript
+// next.config.ts  — only change needed
+const nextConfig: NextConfig = {
+  output: 'standalone',   // ADD THIS LINE
+  // ...existing config unchanged
+};
+```
+
+**Dockerfile** (add to repo root — separate from the backend Dockerfile):
+
+```dockerfile
+# Dockerfile.frontend
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_API_URL
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 8080
+CMD ["node", "server.js"]
+```
+
+> Note: Cloud Run expects port `8080` by default. `next start` binds to `$PORT` automatically with the standalone output.
+
+**Deploy command** (manual / one-off):
+
+```bash
+gcloud run deploy agenthivehq-frontend \
+  --source . \
+  --dockerfile Dockerfile.frontend \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8080 \
+  --memory 512Mi \
+  --cpu 1 \
+  --set-secrets \
+    NEXT_PUBLIC_FIREBASE_API_KEY=NEXT_PUBLIC_FIREBASE_API_KEY:latest,\
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:latest,\
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=NEXT_PUBLIC_FIREBASE_PROJECT_ID:latest,\
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:latest,\
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:latest,\
+    NEXT_PUBLIC_FIREBASE_APP_ID=NEXT_PUBLIC_FIREBASE_APP_ID:latest,\
+    GOOGLE_GENAI_API_KEY=GOOGLE_GENAI_API_KEY:latest,\
+    NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL:latest
+```
+
+> Secrets are pulled from the existing Firebase/GCP Secret Manager automatically — the same secrets `apphosting.yaml` was referencing. No values need to be copied anywhere.
+
+**Optional: Firebase Hosting as CDN in front of Cloud Run** (recommended — free SSL, global CDN, custom domain):
+
+```json
+// firebase.json  — update existing file (keep Auth config, just add hosting)
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "agenthivehq-frontend",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}
+```
+
+This routes all traffic through Firebase Hosting's CDN to your Cloud Run service — custom domain, free SSL, and static asset caching with zero extra cost.
+
+**Cloud Build CI/CD** (add `cloudbuild-frontend.yaml` to repo root for automatic deploys on push):
+
+```yaml
+# cloudbuild-frontend.yaml
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.frontend
+      - --build-arg
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=$PROJECT_ID
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=$_NEXT_PUBLIC_API_URL
+      - -t
+      - gcr.io/$PROJECT_ID/agenthivehq-frontend:$COMMIT_SHA
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args: [push, gcr.io/$PROJECT_ID/agenthivehq-frontend:$COMMIT_SHA]
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - agenthivehq-frontend
+      - --image=gcr.io/$PROJECT_ID/agenthivehq-frontend:$COMMIT_SHA
+      - --region=us-central1
+      - --platform=managed
+substitutions:
+  _NEXT_PUBLIC_API_URL: https://your-fastapi-backend.com
+options:
+  logging: CLOUD_LOGGING_ONLY
+```
+
+**Cost estimate** for light/demo traffic:
+
+| Component | Monthly Cost |
+|---|---|
+| Cloud Run (scale-to-zero, < 2M requests) | $0 |
+| Cloud Run (min-instances=1, eliminates cold start) | ~$6/mo |
+| Firebase Hosting CDN (in front of Cloud Run) | $0 (free tier) |
+| Secret Manager (< 10K access operations) | $0 |
+| Cloud Build (first 120 build-minutes/day) | $0 |
+| **Total (scale-to-zero)** | **$0–6/mo** |
+
+---
+
+### 16.3 Decision Matrix
+
+```
+                    Vercel       Cloudflare     Render        Railway      Cloud Run
+                   (Rec. A)      Pages (B)       (C)           (D)          (E)
+ ───────────────┬─────────────┬───────────────┬──────────────┬────────────┬─────────────
+ Effort         │ 30 min      │ 2–3 hours     │ 1 hour       │ 45 min     │ 1–2 hours
+ Free tier      │ Generous    │ Unlimited BW  │ 750 hrs/mo   │ $5 credit  │ 2M req/mo
+ Paid cost      │ $20/mo      │ $0–25/mo      │ $7/mo        │ ~$10/mo    │ $0–6/mo
+ Genkit compat  │ Full        │ Needs audit   │ Full         │ Full       │ Full
+ Next.js 15     │ Native      │ Via adapter   │ Full         │ Full       │ Full
+ Cold starts    │ < 50 ms     │ < 10 ms       │ Yes (free)   │ No         │ Yes ($0)
+ Code changes   │ Zero        │ Adapter + cfg │ Zero         │ Zero       │ 1 line
+ Secret Mgr     │ Copy-paste  │ Copy-paste    │ Copy-paste   │ Copy-paste │ Native mount
+ Google stack   │ Partial     │ No            │ No           │ No         │ 100%
+ Best for       │ Fastest win │ Scale at $0   │ Node.js APIs │ Team DevEx │ Stay Google
+ ───────────────┴─────────────┴───────────────┴──────────────┴────────────┴─────────────
+```
+
+**Recommendation**:
+- **Fastest migration with zero code changes** → **Vercel (Option A)**
+- **Stay 100% in Google Cloud / Firebase ecosystem** → **Cloud Run (Option E)** — native Secret Manager, same GCP project, Firebase Hosting CDN in front, unified billing. One-line code change (`output: 'standalone'`).
+
+---
+
+### 16.4 Files to Add / Remove After Migration
+
+#### Remove (Firebase App Hosting specific)
+
+```
+apphosting.yaml    ← delete entirely; has no equivalent or meaning on Vercel/Render/Railway
+```
+
+#### Add for Vercel (optional — only needed for custom security headers or API rewrites)
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/backend/:path*",
+      "destination": "https://your-fastapi-backend.com/api/:path*"
+    }
+  ]
+}
+```
+
+---
+
+### 16.5 Firebase Auth After Migration
+
+Firebase Auth is a **client-side SDK** hosted entirely by Google's infrastructure. It has zero dependency on Firebase App Hosting. After migrating the hosting layer:
+
+- `src/contexts/auth-context.tsx` — **no changes needed**
+- Wherever `initializeApp()` is called — **no changes needed**
+- All `NEXT_PUBLIC_FIREBASE_*` env vars — copy values from Firebase project settings into the new host's environment variable dashboard
+
+**One required Firebase Console action** — add the new domain to Auth's allowlist:
+
+```
+Firebase Console → Authentication → Settings → Authorized Domains
+→ Add: your-app.vercel.app
+→ Add: your-custom-domain.com  (if applicable)
+```
+
+This is the single Firebase Console step needed for sign-in to work on the new host.
+
+---
+
+### 16.6 Migration Checklist
+
+```
+PRE-MIGRATION
+[ ] Back up all secret values: Firebase Secret Manager → local .env file (keep secure)
+[ ] Confirm NEXT_PUBLIC_API_URL (FastAPI backend) is publicly reachable
+[ ] Note current custom domain and DNS provider (for CNAME update)
+[ ] Note current Firebase Auth authorized domains list
+
+MIGRATION — Vercel (Option A, ~30 min)
+[ ] Import GitHub repo to Vercel dashboard
+[ ] Paste all env vars (set NEXT_PUBLIC_* to both Build and Runtime availability)
+[ ] Trigger first deploy — confirm build succeeds (check Vercel build logs)
+[ ] Open Vercel preview URL — verify Firebase Auth login flow works end-to-end
+[ ] Open Vercel preview URL — verify Genkit AI flows respond correctly
+[ ] Open Vercel preview URL — verify FastAPI backend calls return data
+[ ] Add custom domain in Vercel Settings → Domains
+[ ] Update DNS: add CNAME record pointing to cname.vercel-dns.com
+[ ] Wait for SSL certificate provisioning (~2–5 min)
+[ ] Firebase Console → Authentication → Authorized Domains → add new domain
+
+POST-MIGRATION
+[ ] Full smoke test: login → run decision → view audit trail end-to-end
+[ ] Delete apphosting.yaml from repo (commit and push)
+[ ] Firebase Console → App Hosting → delete the retired backend (stops billing)
+[ ] Set up Vercel deployment notifications (Slack or email) to replace Firebase alerts
+[ ] Update README.md with new deployment URL and updated deploy instructions
+```
+
+---
+
+### 16.7 Estimated Total Migration Effort and Cost
+
+| Phase | Time | One-Time Cost | Monthly Cost |
+|---|---|---|---|
+| Vercel account setup + repo import | 5 min | $0 | $0 (Hobby tier) |
+| Env var migration from Secret Manager | 10 min | $0 | — |
+| DNS cutover + SSL certificate | 15 min + propagation | $0 | — |
+| Firebase Auth domain allowlist update | 2 min | $0 | — |
+| Smoke testing | 30 min | $0 | — |
+| Firebase App Hosting teardown | 5 min | $0 | Saves ~$0–10/mo |
+| **Total** | **~1 hour** | **$0** | **$0–20/mo** |
+
+> **Bottom line**: Migrating to Vercel costs nothing upfront, requires zero application code changes, completes in under an hour, and eliminates the Firebase Studio / App Hosting dependency entirely while keeping Firebase Auth, Genkit flows, and the FastAPI backend untouched.

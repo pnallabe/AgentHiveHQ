@@ -1,7 +1,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Required for Cloud Run: produces a self-contained server bundle in .next/standalone
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -1,0 +1,17 @@
+# Exclude everything not needed to build the Next.js app in Docker
+.git
+.gitignore
+.next
+.venv
+node_modules
+*.md
+*.log
+coverage
+.env.local
+.env*.local
+.vscode
+.idx
+backend/
+docs/
+cloudbuild-*.yaml
+apphosting.yaml
