@@ -119,25 +119,37 @@ function DynamicInputForm({
   product,
   onInvoke,
   isLoading,
+  schema,
 }: {
   product: ProductSummary;
   onInvoke: (req: InvokeRequest) => void;
   isLoading: boolean;
+  schema?: Record<string, unknown> | null;
 }) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [demoMode, setDemoMode] = useState(product.demo_mode_supported);
   const [scenarioTag, setScenarioTag] = useState(product.demo_scenarios[0]?.tag ?? "");
   const [rawInputs, setRawInputs] = useState("{}");
   const [useRaw, setUseRaw] = useState(false);
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let parsedInputs: Record<string, unknown>;
-    try {
-      parsedInputs = JSON.parse(rawInputs);
-    } catch {
-      alert("Invalid JSON in inputs");
-      return;
+    if (!useRaw && schema?.properties) {
+      // Build payload from typed schema fields
+      parsedInputs = Object.fromEntries(
+        Object.entries(inputs).map(([k, v]) => [k, v])
+      );
+      setJsonError(null);
+    } else {
+      try {
+        parsedInputs = JSON.parse(rawInputs);
+        setJsonError(null);
+      } catch {
+        setJsonError("Invalid JSON — please check your input and try again.");
+        return;
+      }
     }
     onInvoke({
       inputs: parsedInputs as Record<string, unknown>,
@@ -222,6 +234,38 @@ function DynamicInputForm({
             spellCheck={false}
           />
         </div>
+      ) : schema?.properties ? (
+        // Render labelled form fields generated from the upstream OpenAPI schema
+        <div className="space-y-3">
+          {Object.entries(schema.properties as Record<string, Record<string, unknown>>).map(
+            ([fieldName, fieldSchema]) => (
+              <div key={fieldName}>
+                <label className="block text-xs text-zinc-400 mb-1">
+                  <span className="font-medium">{fieldName}</span>
+                  {fieldSchema.type && (
+                    <span className="ml-1.5 font-mono text-zinc-600">
+                      ({String(fieldSchema.type)})
+                    </span>
+                  )}
+                  {fieldSchema.description && (
+                    <span className="ml-1 text-zinc-600">
+                      — {String(fieldSchema.description)}
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={inputs[fieldName] ?? ""}
+                  onChange={(e) =>
+                    setInputs((prev) => ({ ...prev, [fieldName]: e.target.value }))
+                  }
+                  placeholder={String(fieldSchema.example ?? fieldSchema.default ?? "")}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            )
+          )}
+        </div>
       ) : (
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
           <p className="text-xs text-zinc-500 mb-2">
@@ -229,6 +273,10 @@ function DynamicInputForm({
           </p>
           <p className="text-xs font-mono text-zinc-600">inputs: {"{}"} (empty → service uses demo defaults)</p>
         </div>
+      )}
+
+      {jsonError && (
+        <p className="text-xs text-red-400" role="alert">{jsonError}</p>
       )}
 
       <Button
@@ -399,22 +447,34 @@ function ErrorCard({ error }: { error: ApiError }) {
 export default function IntegrationsLabPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [invoking, setInvoking] = useState(false);
   const [result, setResult] = useState<NormalisedResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
+  const [schema, setSchema] = useState<Record<string, unknown> | null>(null);
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const { toast } = useToast();
 
   const loadProducts = useCallback(async () => {
     setLoadingList(true);
+    setListError(null);
     try {
       const list = await apiClient.integrations.list();
       setProducts(list);
-      if (list.length > 0 && !selectedId) {
+      // Prompt 15 — if the previously selected product no longer exists in the
+      // refreshed list, reset selection so we don’t show a stale invoke panel.
+      const stillExists = list.some((p) => p.product_id === selectedId);
+      if (!stillExists) {
+        setSelectedId(list.length > 0 ? list[0].product_id : null);
+        setResult(null);
+        setError(null);
+      } else if (list.length > 0 && !selectedId) {
         setSelectedId(list[0].product_id);
       }
     } catch (err) {
       toast({ description: "Failed to load integrations", variant: "destructive" });
+      setListError((err as Error).message ?? "Failed to load integrations.");
     } finally {
       setLoadingList(false);
     }
@@ -423,6 +483,17 @@ export default function IntegrationsLabPage() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // Fetch the upstream OpenAPI schema whenever the selected product changes.
+  useEffect(() => {
+    if (!selectedId) { setSchema(null); return; }
+    setSchemaLoading(true);
+    setSchema(null);
+    apiClient.integrations.schema(selectedId)
+      .then((s) => setSchema(s))
+      .catch(() => setSchema(null))
+      .finally(() => setSchemaLoading(false));
+  }, [selectedId]);
 
   const selectedProduct = products.find((p) => p.product_id === selectedId) ?? null;
 
@@ -468,6 +539,13 @@ export default function IntegrationsLabPage() {
           Refresh
         </Button>
       </div>
+
+      {/* Inline error banner — shown when the product list fails to load */}
+      {listError && (
+        <div className="rounded-lg border border-reject-base/30 bg-reject-muted p-4 text-sm text-reject-base">
+          {listError}
+        </div>
+      )}
 
       {/* Stats bar */}
       {!loadingList && products.length > 0 && (
@@ -536,6 +614,7 @@ export default function IntegrationsLabPage() {
                   product={selectedProduct}
                   onInvoke={handleInvoke}
                   isLoading={invoking}
+                  schema={schemaLoading ? null : schema}
                 />
 
                 {error && <ErrorCard error={error} />}

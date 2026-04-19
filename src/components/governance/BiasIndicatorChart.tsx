@@ -101,7 +101,7 @@ function BiasSkeleton() {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function BiasIndicatorChart() {
+export function BiasIndicatorChart({ onErrorChange }: { onErrorChange?: (hasError: boolean) => void }) {
   const [report, setReport] = useState<BiasReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,17 +110,24 @@ export function BiasIndicatorChart() {
     let cancelled = false;
     setLoading(true);
     apiClient.governance.biasReport()
-      .then((r) => { if (!cancelled) setReport(r); })
-      .catch((err) => { if (!cancelled) setError(String((err as Error).message)); })
+      .then((r) => {
+        if (!cancelled) { setReport(r); setError(null); onErrorChange?.(false); }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(String((err as Error).message));
+          onErrorChange?.(true);
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
   if (loading) return <BiasSkeleton />;
   if (error) return (
-    <Alert variant="destructive" className="border-red-800/50 bg-red-950/30">
-      <AlertDescription className="text-red-400">{error}</AlertDescription>
-    </Alert>
+    <div className="rounded-lg border border-reject-base/30 bg-reject-muted p-3 text-xs text-reject-base">
+      Failed to load: {error}
+    </div>
   );
   if (!report) return null;
 

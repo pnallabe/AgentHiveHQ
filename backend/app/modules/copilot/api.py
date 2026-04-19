@@ -10,10 +10,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.core.dependencies import require_firebase_user
 from app.core.logging import get_logger
 from app.modules.copilot.service import CopilotService
 from app.modules.underwriting.schemas import ProblemDetail
@@ -65,6 +66,7 @@ class CopilotResponseSchema(BaseModel):
 async def explain_decision(
     request: Request,
     payload: CopilotRequest,
+    _user: dict = Depends(require_firebase_user),
 ) -> CopilotResponseSchema:
     try:
         result = await _service.explain(

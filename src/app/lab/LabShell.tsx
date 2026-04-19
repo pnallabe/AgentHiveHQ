@@ -54,6 +54,7 @@ function Breadcrumb() {
     underwriting: "Underwriting Engine",
     copilot:      "AI Copilot",
     governance:   "Governance Suite",
+    integrations: "Integration Gateway",
   };
 
   for (const seg of segments) {

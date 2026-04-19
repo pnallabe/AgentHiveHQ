@@ -198,6 +198,15 @@ class GovernanceDashboardService:
             "top_reason_codes":          top_reason_codes,
             "approval_rate_by_day":      approval_rate_by_day,
             "portfolio_benchmarks":      portfolio_benchmarks,
+            # Sparkline trend: approvals + rejections per day for the period
+            "trend": [
+                {
+                    "date":        str(r[0]),
+                    "approvals":   int(r[2]),
+                    "rejections":  int(r[1]) - int(r[2]),
+                }
+                for r in day_rows
+            ],
         }
 
     # ── Bias report ───────────────────────────────────────────────────────────
@@ -286,4 +295,5 @@ class GovernanceDashboardService:
             "top_reason_codes":          [],
             "approval_rate_by_day":      [],
             "portfolio_benchmarks":      None,
+            "trend":                     [],
         }

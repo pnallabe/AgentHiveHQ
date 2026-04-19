@@ -6,6 +6,11 @@ Wired in:   app/main.py
 Endpoints:
     POST /api/underwriting/decision   — Run underwriting decision pipeline.
     GET  /api/underwriting/history    — Paginated decision history.
+
+Auth:
+    Both endpoints require a valid Firebase ID token supplied as
+    ``Authorization: Bearer <token>``.  Use the ``require_firebase_user``
+    dependency from ``app.core.dependencies``.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.underwriting.schemas import (
@@ -52,6 +58,7 @@ async def create_decision(
     request: Request,
     payload: UnderwritingRequest,
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
 ) -> UnderwritingResponse:
     try:
         return await _service.decide(payload, db)
@@ -93,6 +100,7 @@ async def get_history(
     decision: Optional[str] = Query(default=None, description="Filter: approve | reject | review"),
     demo_mode: Optional[bool] = Query(default=None, description="Filter by demo mode flag"),
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
 ) -> PaginatedDecisions:
     stmt = select(DecisionRecord).order_by(DecisionRecord.created_at.desc())
 

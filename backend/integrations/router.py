@@ -34,6 +34,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
 from app.shared.db_models import AuditLog, DecisionRecord
@@ -139,7 +140,9 @@ async def _write_audit_record(
         "including their live health status polled every 60 seconds."
     ),
 )
-async def list_integrations() -> list[ProductSummary]:
+async def list_integrations(
+    _user: dict = Depends(require_firebase_user),
+) -> list[ProductSummary]:
     return reg.get_all_summaries()
 
 
@@ -152,7 +155,10 @@ async def list_integrations() -> list[ProductSummary]:
     response_model=ProductSummary,
     summary="Get a single registered product",
 )
-async def get_integration(product_id: str) -> ProductSummary | JSONResponse:
+async def get_integration(
+    product_id: str,
+    _user: dict = Depends(require_firebase_user),
+) -> ProductSummary | JSONResponse:
     manifest = reg.get_manifest(product_id)
     if not manifest:
         return _not_found(product_id)
@@ -175,6 +181,7 @@ async def get_integration(product_id: str) -> ProductSummary | JSONResponse:
 async def get_product_schema(
     request: Request,
     product_id: str,
+    _user: dict = Depends(require_firebase_user),
 ) -> JSONResponse:
     manifest = reg.get_manifest(product_id)
     if not manifest:
@@ -206,6 +213,7 @@ async def invoke_integration(
     product_id: str,
     payload: InvokeRequest,
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
 ) -> NormalisedResponse | JSONResponse:
     manifest = reg.get_manifest(product_id)
     if not manifest:

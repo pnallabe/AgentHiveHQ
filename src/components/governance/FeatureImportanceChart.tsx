@@ -99,7 +99,7 @@ function CustomTooltip({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function FeatureImportanceChart() {
+export function FeatureImportanceChart({ onErrorChange }: { onErrorChange?: (hasError: boolean) => void }) {
   const [data, setData] = useState<FeatureImportance[]>([]);
   const [loading, setLoading] = useState(true);
   const [sampleSize, setSampleSize] = useState(0);
@@ -116,9 +116,13 @@ export function FeatureImportanceChart() {
         const agg = aggregate(res.items);
         setData(agg);
         setSampleSize(res.items.length);
+        onErrorChange?.(false);
       })
       .catch((err) => {
-        if (!cancelled) setError(String((err as Error).message));
+        if (!cancelled) {
+          setError(String((err as Error).message));
+          onErrorChange?.(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -137,7 +141,11 @@ export function FeatureImportanceChart() {
     );
 
   if (error)
-    return <p className="text-sm text-red-400">{error}</p>;
+    return (
+      <div className="rounded-lg border border-reject-base/30 bg-reject-muted p-3 text-xs text-reject-base">
+        Failed to load: {error}
+      </div>
+    );
 
   if (!data.length)
     return (

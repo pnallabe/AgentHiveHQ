@@ -11,8 +11,6 @@ import { useDemoMode } from "@/contexts/demo-mode-context";
 import { apiClient, type ApiError } from "@/lib/api";
 import type { UnderwritingRequest } from "@/lib/types";
 
-const MODEL_VERSION = "v1.0.0";
-
 export default function UnderwritingPage() {
   const { demoMode } = useDemoMode();
   const [outputState, setOutputState] = useState<OutputState>({
@@ -39,6 +37,8 @@ export default function UnderwritingPage() {
   const result = outputState.status === "result" ? outputState.result : null;
   // coerce null → undefined so AuditPanel's elapsedMs?: number is satisfied
   const elapsedMs = outputState.status === "result" ? (outputState.elapsedMs ?? undefined) : undefined;
+  // Derive model version from the API response; show em-dash while idle/loading.
+  const modelVersion = result?.audit?.model_version ?? null;
 
   return (
     <div className="space-y-4">
@@ -49,7 +49,7 @@ export default function UnderwritingPage() {
             variant="outline"
             className="border-zinc-700 bg-zinc-900 font-mono text-xs text-zinc-400"
           >
-            {MODEL_VERSION}
+            {modelVersion ?? <span className="text-zinc-600">—</span>}
           </Badge>
           {demoMode && (
             <Badge className="bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/40 text-xs font-semibold">

@@ -14,6 +14,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from app.core.dependencies import require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.governance.service import GovernanceDashboardService
@@ -42,6 +43,7 @@ async def governance_dashboard(
         description="Time window for aggregation",
     ),
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
 ) -> dict[str, Any]:
     if period not in _VALID_PERIODS:
         return JSONResponse(
@@ -83,6 +85,7 @@ async def governance_dashboard(
 async def bias_report(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
 ) -> dict[str, Any]:
     try:
         return await _service.bias_report(db=db)

@@ -13,8 +13,6 @@
 import { auth } from "@/lib/firebase";
 import type {
   BiasReport,
-  CopilotRequest,
-  CopilotResponse,
   GovernanceDashboard,
   HistoryParams,
   PaginatedResponse,
@@ -63,21 +61,30 @@ export class ApiError extends Error {
 // Internal fetch helper
 // ---------------------------------------------------------------------------
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+/**
+ * Base URL for the FastAPI backend.
+ * Must be set via the NEXT_PUBLIC_API_URL environment variable in production.
+ * Defaults to http://localhost:8000 for local development only.
+ */
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
+if (!_rawApiUrl && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "[api] NEXT_PUBLIC_API_URL is not set. Add it to your environment before building."
+  );
+}
+const BASE_URL = _rawApiUrl ?? "http://localhost:8000";
 
 const RETRY_STATUSES = new Set([502, 503, 504]);
 const TIMEOUT_MS = 15_000;
 const RETRY_DELAY_MS = 500;
 
 async function getIdToken(): Promise<string | null> {
-  try {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return null;
-    return await currentUser.getIdToken();
-  } catch {
-    return null;
-  }
+  const currentUser = auth.currentUser;
+  // Expected case: user is not signed in
+  if (!currentUser) return null;
+  // Any other error (token refresh failure, network, etc.) is re-thrown so
+  // apiFetch can surface it via ApiError instead of silently dropping auth.
+  return await currentUser.getIdToken();
 }
 
 async function delay(ms: number): Promise<void> {
@@ -93,7 +100,17 @@ async function apiFetch<T>(
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const token = await getIdToken();
+    let token: string | null;
+    try {
+      token = await getIdToken();
+    } catch (tokenErr) {
+      throw ApiError.fromStatus(
+        0,
+        `Failed to obtain auth token: ${
+          tokenErr instanceof Error ? tokenErr.message : String(tokenErr)
+        }`
+      );
+    }
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -106,7 +123,9 @@ async function apiFetch<T>(
     const response = await fetch(`${BASE_URL}${path}`, {
       ...options,
       headers,
-      signal: controller.signal,
+      // Prefer an externally supplied AbortSignal (e.g. for stale-request
+      // cancellation) but fall back to the internal timeout controller.
+      signal: options.signal ?? controller.signal,
     });
 
     clearTimeout(timeoutId);
@@ -119,8 +138,9 @@ async function apiFetch<T>(
 
     // Redirect to login on 401
     if (response.status === 401) {
-      await auth.signOut();
       if (typeof window !== "undefined") {
+        // Client-only: sign out and redirect
+        try { await auth.signOut(); } catch { /* ignore */ }
         window.location.replace("/login");
       }
       throw ApiError.fromStatus(401, "Session expired. Please log in again.");
@@ -205,19 +225,11 @@ export const apiClient = {
     },
   },
 
-  copilot: {
-    explain(payload: CopilotRequest): Promise<CopilotResponse> {
-      return apiFetch<CopilotResponse>("/api/copilot/explain", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    },
-  },
-
   governance: {
-    dashboard(period = "last_30_days"): Promise<GovernanceDashboard> {
+    dashboard(period = "last_30_days", signal?: AbortSignal): Promise<GovernanceDashboard> {
       return apiFetch<GovernanceDashboard>(
-        `/api/governance/dashboard?period=${encodeURIComponent(period)}`
+        `/api/governance/dashboard?period=${encodeURIComponent(period)}`,
+        { signal }
       );
     },
 

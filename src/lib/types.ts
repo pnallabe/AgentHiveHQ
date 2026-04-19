@@ -85,6 +85,12 @@ export interface HistoryParams {
 // Copilot
 // ---------------------------------------------------------------------------
 
+/**
+ * CopilotRequest — kept for reference; compatible with CreditCopilotInput
+ * used by the Genkit server action. The dead `apiClient.copilot` namespace that
+ * called POST /api/copilot/explain has been removed (see audit fix C-P-1);
+ * this type is retained because it may still be needed for future wiring.
+ */
 export interface CopilotRequest {
   decision_response: UnderwritingResponse;
   applicant_context?: string;
@@ -131,6 +137,8 @@ export interface GovernanceDashboard {
   approval_rate_by_segment: SegmentBreakdown;
   rules_triggered_frequency: RuleFrequency;
   top_reason_codes: TopReasonCode[];
+  /** Daily trend data for sparklines, grouped by day over the requested period. */
+  trend?: { date: string; approvals: number; rejections: number }[];
 }
 
 export interface IncomeBandStats {

@@ -23,6 +23,7 @@ import {
   Line,
 } from "recharts";
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -232,7 +233,7 @@ function OverviewTab({
           value={data ? String(data.total_decisions) : "—"}
           icon={<Clock className="h-4 w-4" />}
           loading={loading}
-          sparkData={[{v:8},{v:14},{v:11},{v:18},{v:13},{v:20},{v:16}]}
+          sparkData={data?.trend?.map((t) => ({ v: t.approvals + t.rejections }))}
           sparkColor="#3366f4"
         />
         <KpiCard
@@ -241,7 +242,10 @@ function OverviewTab({
           icon={<CheckCircle2 className="h-4 w-4" />}
           sub={period !== "all_time" ? PERIOD_LABELS[period] : undefined}
           loading={loading}
-          sparkData={[{v:62},{v:65},{v:60},{v:68},{v:70},{v:67},{v:72}]}
+          sparkData={data?.trend?.map((t) => {
+            const total = t.approvals + t.rejections;
+            return { v: total > 0 ? (t.approvals / total) * 100 : 0 };
+          })}
           sparkColor="#22c55e"
         />
         <KpiCard
@@ -249,16 +253,12 @@ function OverviewTab({
           value={data ? fmtMoney(data.average_credit_limit) : "—"}
           icon={<DollarSign className="h-4 w-4" />}
           loading={loading}
-          sparkData={[{v:15200},{v:15800},{v:14900},{v:16100},{v:15600},{v:16800},{v:17200}]}
-          sparkColor="#f59e0b"
         />
         <KpiCard
           label="Avg APR"
           value={data ? `${data.average_apr.toFixed(2)}%` : "—"}
           icon={<Percent className="h-4 w-4" />}
           loading={loading}
-          sparkData={[{v:18.2},{v:17.8},{v:18.5},{v:17.1},{v:16.9},{v:17.4},{v:16.8}]}
-          sparkColor="#6366f1"
         />
       </div>
 
@@ -282,7 +282,7 @@ function OverviewTab({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <FeatureImportanceChart />
+            <FeatureImportanceChart onErrorChange={setFeatureChartError} />
           </CardContent>
         </Card>
       </div>
@@ -297,21 +297,30 @@ export default function GovernancePage() {
   const [dashboard, setDashboard] = useState<GovernanceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [featureChartError, setFeatureChartError] = useState(false);
+  const [biasChartError, setBiasChartError] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.governance.dashboard(period);
+      const data = await apiClient.governance.dashboard(period, signal);
       setDashboard(data);
     } catch (err) {
+      // Ignore AbortError — this is expected when the period changes rapidly
+      // and the previous request is cancelled by the cleanup function.
+      if (err instanceof Error && err.name === "AbortError") return;
       setError((err as Error).message ?? "Failed to load governance data.");
     } finally {
       setLoading(false);
     }
   }, [period]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   return (
     <div className="space-y-4">
@@ -328,6 +337,9 @@ export default function GovernancePage() {
             className="text-xs data-[state=active]:bg-surface-overlay data-[state=active]:text-zinc-100"
           >
             Overview
+            {featureChartError && (
+              <AlertTriangle className="ml-1.5 inline h-3 w-3 text-amber-400" aria-label="Chart error" />
+            )}
           </TabsTrigger>
           <TabsTrigger
             value="history"
@@ -340,6 +352,9 @@ export default function GovernancePage() {
             className="text-xs data-[state=active]:bg-surface-overlay data-[state=active]:text-zinc-100"
           >
             Bias Report
+            {biasChartError && (
+              <AlertTriangle className="ml-1.5 inline h-3 w-3 text-amber-400" aria-label="Chart error" />
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -358,7 +373,7 @@ export default function GovernancePage() {
         </TabsContent>
 
         <TabsContent value="bias" className="mt-4">
-          <BiasIndicatorChart />
+          <BiasIndicatorChart onErrorChange={setBiasChartError} />
         </TabsContent>
       </Tabs>
     </div>
