@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "AgentHiveHQ"
+		},
+		{
+			"path": "../ThinFile_Credit_Underwriting_Engine"
+		},
+		{
+			"path": "../credit-risk-platform"
+		},
+		{
+			"path": "../LucidCredit"
+		}
+	],
+	"settings": {}
+}
