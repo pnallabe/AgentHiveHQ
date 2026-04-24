@@ -1,0 +1,86 @@
+# AgentHive External Product Manifest
+# ─────────────────────────────────────────────────────────────────────────────
+# Product: LucidCredit Analytical Copilot
+# Version: 1.0.0
+#
+# What this product does
+# ----------------------
+# LucidCredit is a zero-hallucination AI copilot for credit decisions.
+# It generates natural-language explanations of credit decisions grounded
+# entirely in retrieved data — every claim cites a source document, API
+# response, or database record.
+#
+# Three session types are supported via the inputs.session_type field:
+#   analyst   — answers free-text analyst questions with SHAP-grounded
+#               narratives, citation trail, and confidence scoring
+#   applicant — generates ECOA/FCRA-compliant adverse action notices,
+#               approval letters, and counteroffer communications
+#   briefing  — generates executive portfolio briefings (PD distributions,
+#               approval rates, segment stress summaries)
+#
+# How to wire up authentication
+# ─────────────────────────────
+# 1. Pick a shared key (e.g. openssl rand -hex 32).
+# 2. Add to AgentHiveHQ backend .env:
+#      LUCIDCREDIT_API_KEY=<your-key>
+# 3. Add to LucidCredit backend .env:
+#      AGENTHIVE_INCOMING_KEY=<same-key>
+# 4. The proxy injects it as:
+#      Authorization: Bearer <key>
+#      X-AgentHive-Key: <key>
+# ─────────────────────────────────────────────────────────────────────────────
+
+product_id: lucidcredit-copilot-v1
+display_name: LucidCredit Analytical Copilot
+description: >
+  Zero-hallucination AI copilot for credit decisions. Generates SHAP-grounded
+  analyst briefings, ECOA/FCRA-compliant adverse action notices, and portfolio
+  stress narratives. Every claim cites a retrieved source — no parametric
+  hallucination. Powered by GPT-4.1 + pgvector RAG.
+category: credit
+
+# ── Routing ──────────────────────────────────────────────────────────────────
+# For local development: LucidCredit API runs on port 8090.
+# For Docker Compose: use the internal service name http://copilot-api:8090.
+# For production: replace with your deployed HTTPS URL.
+base_url: http://localhost:8090
+health_check_path: /v1/gateway/health
+invoke_path: /v1/gateway/invoke
+schema_path: /openapi.json
+
+# ── Authentication ────────────────────────────────────────────────────────────
+auth_type: api_key
+auth_secret_env_var: LUCIDCREDIT_API_KEY
+
+# ── Behaviour ─────────────────────────────────────────────────────────────────
+copilot_enabled: true
+demo_mode_supported: true
+demo_scenarios:
+  - tag: analyst_decision_explanation
+    label: "Analyst — Decision Explanation"
+    description: "SHAP-grounded narrative for a high-risk decline (APP-DEMO-001)"
+  - tag: applicant_decline_notice
+    label: "Applicant — Adverse Action Notice"
+    description: "ECOA-compliant decline notice for APP-DEMO-002 (DTI, thin file)"
+  - tag: applicant_approve_notice
+    label: "Applicant — Approval Letter"
+    description: "Approval communication with credit limit & APR for APP-DEMO-003"
+
+# ── Compliance / governance ───────────────────────────────────────────────────
+# PII fields stripped from audit logs before persistence in AgentHiveHQ.
+pii_fields:
+  - application_id
+  - full_name
+  - email
+  - ssn
+  - date_of_birth
+  - account_number
+  - phone
+
+data_residency: us-east-1
+
+# ── SLA ───────────────────────────────────────────────────────────────────────
+# Analyst Q&A typically takes 3–8 seconds (RAG + LLM chain).
+# Applicant communications can take 5–12 seconds.
+timeout_seconds: 45
+rate_limit_rpm: 30
