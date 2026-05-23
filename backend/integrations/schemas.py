@@ -101,8 +101,13 @@ class ProductManifest(BaseModel):
     @field_validator("base_url")
     @classmethod
     def must_be_https_or_localhost(cls, v: str) -> str:
-        if not (v.startswith("https://") or v.startswith("http://localhost") or v.startswith("http://127.0.0.1")):
-            raise ValueError("base_url must use HTTPS (or localhost for development)")
+        if not (
+            v.startswith("https://")
+            or v.startswith("http://localhost")
+            or v.startswith("http://127.0.0.1")
+            or v.startswith("http://host.docker.internal")
+        ):
+            raise ValueError("base_url must use HTTPS (or localhost/host.docker.internal for development)")
         return v.rstrip("/")
 
     @property
@@ -197,6 +202,9 @@ class NormalisedResponse(BaseModel):
         default_factory=dict,
         description="Fields from the upstream payload not in the normalised contract",
     )
+    # Context ingestion — surfaces pending clarification questions to the frontend
+    needs_clarification: bool = Field(default=False)
+    clarification_items: list[dict[str, Any]] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -206,6 +214,7 @@ class NormalisedResponse(BaseModel):
             "decision_id", "decision", "summary", "details",
             "explanations", "reason_codes", "audit", "source",
             "product_id", "raw_extra",
+            "needs_clarification", "clarification_items",
         }
         extra = {k: v for k, v in data.items() if k not in known}
         if extra:

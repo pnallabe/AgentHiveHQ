@@ -15,6 +15,30 @@
 #   _API_BASE_URL             — NEXT_PUBLIC_API_BASE_URL
 
 steps:
+  # ── 0. Validate substitutions — fail fast if any Firebase var is missing ───
+  # This prevents a silent deploy with "placeholder" credentials baked into the
+  # client bundle, which causes auth/invalid-api-key errors at runtime.
+  - name: bash
+    id: validate-substitutions
+    args:
+      - -c
+      - |
+        FAILED=0
+        for VAR_NAME in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID FIREBASE_APP_ID API_BASE_URL; do
+          eval VAL=\$$VAR_NAME
+          if [ -z "$$VAL" ] || [ "$$VAL" = "placeholder" ]; then
+            echo "ERROR: substitution _$$VAR_NAME is missing or set to 'placeholder'. Set it in the Cloud Build Trigger UI."
+            FAILED=1
+          fi
+        done
+        exit $$FAILED
+    env:
+      - FIREBASE_API_KEY=$_FIREBASE_API_KEY
+      - FIREBASE_AUTH_DOMAIN=$_FIREBASE_AUTH_DOMAIN
+      - FIREBASE_PROJECT_ID=$_FIREBASE_PROJECT_ID
+      - FIREBASE_APP_ID=$_FIREBASE_APP_ID
+      - API_BASE_URL=$_API_BASE_URL
+
   # ── 1. Build Docker image ──────────────────────────────────────────────────
   - name: gcr.io/cloud-builders/docker
     id: build
@@ -27,16 +51,28 @@ steps:
       - --build-arg=NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$_FIREBASE_SENDER_ID
       - --build-arg=NEXT_PUBLIC_FIREBASE_APP_ID=$_FIREBASE_APP_ID
       - --build-arg=NEXT_PUBLIC_API_BASE_URL=$_API_BASE_URL
+      - --build-arg=NEXT_PUBLIC_DEMO_MODE_DEFAULT=$_DEMO_MODE_DEFAULT
+      # Tag with the commit SHA for rollback capability, and also as :latest
+      # _COMMIT_SHA is passed by scripts/deploy-frontend.sh (local git SHA).
+      - -t=us-central1-docker.pkg.dev/agenthivehq-landing/agenthivehq/frontend:$_COMMIT_SHA
       - -t=$_IMAGE_TAG
       - .
+    waitFor: [validate-substitutions]
 
-  # ── 2. Push image to Artifact Registry ────────────────────────────────────
+  # ── 2. Push both tags to Artifact Registry ────────────────────────────────
   - name: gcr.io/cloud-builders/docker
-    id: push
+    id: push-sha
+    args: [push, "us-central1-docker.pkg.dev/agenthivehq-landing/agenthivehq/frontend:$_COMMIT_SHA"]
+    waitFor: [build]
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
     args: [push, $_IMAGE_TAG]
     waitFor: [build]
 
   # ── 3. Deploy to Cloud Run ─────────────────────────────────────────────────
+  # Deploy the SHA-tagged image so Cloud Run revisions are pinned to exact
+  # builds. Use `gcloud run services update-traffic` to roll back to any SHA.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy
     entrypoint: gcloud
@@ -44,21 +80,25 @@ steps:
       - run
       - deploy
       - $_SERVICE_NAME
-      - --image=$_IMAGE_TAG
+      - --image=us-central1-docker.pkg.dev/agenthivehq-landing/agenthivehq/frontend:$_COMMIT_SHA
       - --region=$_REGION
       - --platform=managed
       - --allow-unauthenticated
       - --port=8080
-      - --memory=512Mi
+      - --memory=1Gi
       - --cpu=1
       - --min-instances=1
       - --max-instances=10
-    waitFor: [push]
+    waitFor: [push-sha, push-latest]
 
 substitutions:
   _REGION: us-central1
   _SERVICE_NAME: agenthivehq-frontend
+  # :latest tag kept for convenience — revision-pinned SHA tag is used for deploy
   _IMAGE_TAG: us-central1-docker.pkg.dev/agenthivehq-landing/agenthivehq/frontend:latest
+  # !! REQUIRED — set all _FIREBASE_* and _API_BASE_URL in the Cloud Build Trigger UI.
+  # Do NOT leave these as "placeholder" — the validate-substitutions step will fail
+  # the build before any Docker build occurs.
   _FIREBASE_API_KEY: placeholder
   _FIREBASE_AUTH_DOMAIN: placeholder
   _FIREBASE_PROJECT_ID: placeholder
@@ -66,7 +106,14 @@ substitutions:
   _FIREBASE_SENDER_ID: placeholder
   _FIREBASE_APP_ID: placeholder
   _API_BASE_URL: placeholder
+  _DEMO_MODE_DEFAULT: "false"
+  # Populated by scripts/deploy-frontend.sh from `git rev-parse --short HEAD`.
+  # Falls back to "manual" when git is unavailable.
+  _COMMIT_SHA: manual
 
 options:
+  # ALLOW_UNSET: substitutions not provided at trigger time fall back to the
+  # defaults above. The validate-substitutions step then rejects any that are
+  # still "placeholder", making missing vars a hard build failure.
   substitution_option: ALLOW_LOOSE
   logging: CLOUD_LOGGING_ONLY

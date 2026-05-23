@@ -1,8 +1,9 @@
 version: "3.9"
 
 services:
-  api:
+  agenthive-api:
     build: .
+    container_name: agenthivehq-api
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
@@ -14,7 +15,7 @@ services:
     volumes:
       # Mount source for hot-reload during development
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -22,14 +23,15 @@ services:
       retries: 3
       start_period: 15s
     depends_on:
-      db:
+      agenthive-postgres:
         condition: service_healthy
     profiles:
       - postgres   # Only active in the postgres profile stack
 
   # ── SQLite-only dev stack (no postgres profile needed) ────────────────────
-  api-sqlite:
+  agenthive-api-sqlite:
     build: .
+    container_name: agenthivehq-api-sqlite
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
@@ -40,7 +42,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -49,8 +51,9 @@ services:
       start_period: 15s
 
   # ── PostgreSQL (optional — switch DATABASE_URL to use) ────────────────────
-  db:
+  agenthive-postgres:
     image: postgres:16-alpine
+    container_name: agenthivehq-postgres
     environment:
       POSTGRES_DB: agenthive
       POSTGRES_USER: agenthive
@@ -58,7 +61,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - agenthive_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agenthive -d agenthive"]
       interval: 10s
@@ -69,5 +72,5 @@ services:
       - postgres  # Only starts with: docker compose --profile postgres up
 
 volumes:
-  pgdata:
+  agenthive_pgdata:
 

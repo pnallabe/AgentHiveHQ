@@ -32,8 +32,8 @@ category: credit
 # For local development, use http://localhost:8001 (or ngrok tunnel URL).
 # ThinFile serves the AgentHive adapter on the same port as the main API.
 # /invoke and /health are handled by src/api/routes/agenthive_gateway.py
-base_url: http://localhost:8001
-health_check_path: /health
+base_url: http://host.docker.internal:8001
+health_check_path: /v1/health
 invoke_path: /invoke
 schema_path: /openapi.json
 

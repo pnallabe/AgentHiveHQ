@@ -43,7 +43,7 @@ category: credit
 # For local development: LucidCredit API runs on port 8090.
 # For Docker Compose: use the internal service name http://copilot-api:8090.
 # For production: replace with your deployed HTTPS URL.
-base_url: http://localhost:8090
+base_url: http://host.docker.internal:8090
 health_check_path: /v1/gateway/health
 invoke_path: /v1/gateway/invoke
 schema_path: /openapi.json

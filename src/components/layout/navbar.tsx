@@ -9,7 +9,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Menu, LogOut, LogIn } from "lucide-react";
+import { Menu, LogOut, LogIn, TrendingUp } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -115,6 +115,17 @@ export function Navbar() {
                     <LogOut className="mr-1.5 h-4 w-4" aria-hidden />
                     Logout
                   </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="hidden text-zinc-400 hover:text-zinc-100 md:inline-flex gap-1.5"
+                  >
+                    <Link href="/analytics/overview">
+                      <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                      Analytics
+                    </Link>
+                  </Button>
                   <Button asChild size="sm" className="hidden bg-brand-500 hover:bg-brand-600 text-white md:inline-flex">
                     <Link href="/lab">Product Lab</Link>
                   </Button>
@@ -176,6 +187,21 @@ export function Navbar() {
                       {l.label}
                     </Link>
                   ))}
+                  {user && (
+                    <Link
+                      href="/analytics/overview"
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "rounded-lg px-3 py-2.5 text-base transition-colors flex items-center gap-2",
+                        isActive("/analytics")
+                          ? "bg-brand-950 text-brand-300 font-medium"
+                          : "text-zinc-300 hover:bg-surface-overlay hover:text-zinc-100"
+                      )}
+                    >
+                      <TrendingUp className="h-4 w-4" aria-hidden />
+                      Analytics
+                    </Link>
+                  )}
                 </nav>
                 <div className="mt-auto space-y-2 pt-6 border-t border-surface-border">
                   {!loading && (

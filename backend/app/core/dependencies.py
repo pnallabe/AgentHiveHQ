@@ -14,6 +14,8 @@ import asyncio
 import logging
 import os
 
+from typing import Optional
+
 from fastapi import Depends, Header, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -30,7 +32,7 @@ _SKIP_AUTH = os.environ.get("ANALYTICS_SKIP_AUTH", "false").lower() == "true"
 
 
 def _extract_token(
-    credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer),
 ) -> str:
     """Extract bearer token from the Authorization header.
 
@@ -68,7 +70,7 @@ def get_firebase_token(token: str = Depends(_extract_token)) -> dict:
 
 
 async def require_firebase_user(
-    credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer),
 ) -> dict:
     """Async FastAPI dependency that verifies a Firebase ID token.
 

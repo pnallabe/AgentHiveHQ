@@ -135,3 +135,65 @@
   transition-duration: 700ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ── Pitch Deck Print / PDF Export ──────────────────────────────────────── */
+
+/* Landscape 16:9 pages, no browser margins — ideal for slide decks */
+@page {
+  size: landscape;
+  margin: 0;
+}
+
+@media print {
+  /* Force exact dark-mode colours and backgrounds through to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation chrome, arrows, dots when printing */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Suppress scrollbars + body margins */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #05050A !important;
+  }
+
+  /* One slide per page — used by the print-mode renderer in DeckLayout */
+  .deck-print-slide {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
+    background: #05050A !important;
+    /* Prevent Framer Motion animations from re-triggering mid-print */
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Suppress any leftover page-break on the very last slide */
+  .deck-print-slide:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Legacy selector kept for backwards compat */
+  .deck-slide-page {
+    display: block !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+    position: relative;
+  }
+}

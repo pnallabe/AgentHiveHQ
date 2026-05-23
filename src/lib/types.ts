@@ -199,6 +199,12 @@ export interface ExternalAuditBlock {
 }
 
 /** Normalised response from any external product call */
+export interface ClarificationItem {
+  id: string;
+  question: string;
+  options: string[];
+}
+
 export interface NormalisedResponse {
   decision_id: string;
   decision: string;
@@ -210,6 +216,8 @@ export interface NormalisedResponse {
   source: string;
   product_id: string;
   raw_extra: Record<string, unknown>;
+  needs_clarification?: boolean;
+  clarification_items?: ClarificationItem[];
 }
 
 // ---------------------------------------------------------------------------

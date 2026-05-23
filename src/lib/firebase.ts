@@ -1,6 +1,8 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,19 +13,40 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Guard against SSR/build-time initialization when env vars are not available.
-// Firebase is only used in "use client" components, so this is safe.
+/**
+ * Returns true when the value is absent, empty, or the literal string
+ * "placeholder" that Cloud Build injects when a substitution var is not set
+ * in the trigger. Guards against Firebase initialising with invalid credentials
+ * that would cause every API call to return 400 auth/invalid-api-key.
+ */
+const isPlaceholder = (v: string | undefined): boolean =>
+  !v || v === "placeholder" || v.startsWith("placeholder");
+
 let app: FirebaseApp;
 let auth: Auth;
+let db: Firestore;
+let storage: FirebaseStorage;
 
-if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+if (!isPlaceholder(process.env.NEXT_PUBLIC_FIREBASE_API_KEY)) {
+  // Real credentials — initialise Firebase once across HMR reloads.
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
 } else {
-  // Stub for SSR / build-time static generation. Real usage is always client-side.
+  // Stub for SSR / build-time static generation, or when credentials are
+  // missing / placeholder. Real usage is always in "use client" components,
+  // so callers must check `auth` is valid before calling Firebase APIs.
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      "[firebase] Skipping initialisation — NEXT_PUBLIC_FIREBASE_API_KEY is missing or placeholder."
+    );
+  }
   app = {} as FirebaseApp;
   auth = {} as Auth;
+  db = {} as Firestore;
+  storage = {} as FirebaseStorage;
 }
 
-export { app, auth };
+export { app, auth, db, storage };
 

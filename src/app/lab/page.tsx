@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BrainCircuit, MessageSquare, BarChart3, ArrowRight, Plug } from "lucide-react";
+import { BrainCircuit, Brain, BarChart3, ArrowRight, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PRODUCTS = [
@@ -15,11 +15,11 @@ const PRODUCTS = [
     iconBg: "bg-brand-950",
   },
   {
-    href: "/lab/copilot",
-    title: "AI Copilot",
+    href: "/lab/integrations",
+    title: "Lucid Credit",
     description:
-      "Generate natural-language explanations of credit decisions. Ideal for analyst briefings and applicant communication.",
-    Icon: MessageSquare,
+      "Zero-hallucination AI analytical copilot for credit decisions. Every claim traces back to a source document.",
+    Icon: Brain,
     iconClass: "text-sky-400",
     iconBg: "bg-sky-950",
   },
@@ -60,7 +60,7 @@ export default function LabPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {PRODUCTS.map(({ href, title, description, Icon, iconClass, iconBg }) => (
           <Link
-            key={href}
+            key={title}
             href={href}
             className={cn(
               "group flex flex-col gap-4 rounded-xl border border-surface-border bg-surface-raised p-5",

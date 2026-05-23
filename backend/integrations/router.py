@@ -259,8 +259,11 @@ async def invoke_integration(
             demo_mode=payload.demo_mode,
         )
     except Exception as exc:
-        # Audit write failure must not break the API response
+        # Audit write failure must not break the API response.
+        # Rollback is required to reset the session to a clean state so that
+        # get_db()'s post-yield commit does not raise InvalidRequestError.
         logger.error("Failed to write audit record for %s: %s", product_id, exc)
+        await db.rollback()
 
     return normalised
 

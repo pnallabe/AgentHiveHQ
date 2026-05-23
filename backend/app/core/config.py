@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = Field(default="", description="Google Gemini API key (gemini-2.0-flash). Get one at https://aistudio.google.com/app/apikey")
     OPENAI_API_KEY: str = Field(default="", description="OpenAI API key (gpt-4o-mini); fallback when GEMINI_API_KEY is unset")
 
+    # ── Cloudflare DNS ────────────────────────────────────────────────────────
+    CF_API_TOKEN: str = Field(
+        default="",
+        description="Cloudflare API Token with DNS:Edit + Zone:Read permissions. Create at https://dash.cloudflare.com/profile/api-tokens",
+    )
+    CF_ZONE_ID: str = Field(
+        default="",
+        description="Default Cloudflare Zone ID.  Find it on the zone Overview page (bottom-right).",
+    )
+
     # ── Google Cloud / BigQuery (primary datasource) ───────────────────────────
     # Shared with credit-risk-platform — points at the Freddie Mac SFLLD dataset.
     GCP_PROJECT_ID: str = Field(default="ai-risk-workflow", description="GCP project that hosts the BigQuery datasets")

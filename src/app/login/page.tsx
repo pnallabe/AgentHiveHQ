@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   getRedirectResult,
   GoogleAuthProvider,
 } from "firebase/auth";
@@ -88,8 +88,10 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
 
-  // Handle redirect result from Google sign-in
+  // Handle popup-blocked → redirect fallback: Firebase redirects back to /login
+  // with the auth result in the URL. getRedirectResult() resolves it on mount.
   useEffect(() => {
+    if (!auth || !(auth as any).onAuthStateChanged) return; // stub guard
     setGoogleLoading(true);
     getRedirectResult(auth)
       .then((result) => {
@@ -104,7 +106,10 @@ export default function LoginPage() {
         const msg = resolveGoogleError(err);
         if (msg) setError(msg);
       });
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
   // Email login
   const handleLogin = async (event: FormEvent) => {
@@ -131,14 +136,14 @@ export default function LoginPage() {
     }
   };
 
-  // Google OAuth — uses redirect flow (more reliable than popup across browsers)
+  // Google OAuth — popup flow (works without Firebase Hosting /__/firebase/ routes)
   const handleGoogle = async () => {
     setError(null);
     setGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
-      // Browser will redirect away; code below only runs on error
+      await signInWithPopup(auth, provider);
+      router.push("/dashboard");
     } catch (err: any) {
       setGoogleLoading(false);
       const msg = resolveGoogleError(err);

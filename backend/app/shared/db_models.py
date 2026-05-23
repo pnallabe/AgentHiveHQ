@@ -198,3 +198,273 @@ class AuditLog(Base):
 
     def __repr__(self) -> str:
         return f"<AuditLog id={self.id} event={self.event_type} decision={self.decision_id}>"
+
+
+# ── Analytics materialised-cache tables ──────────────────────────────────────
+# These are NOT source-of-truth tables.  They are local caches written by the
+# analytics aggregator on a 15-minute schedule so dashboard reads are fast.
+# Canonical sources: PostgreSQL CC DB (card_accounts) + BigQuery (loan_applications).
+
+class LoanRecord(Base):
+    """Local materialised cache of origination records.
+
+    Sourced from ``origination_5m.parquet`` (CC) and BigQuery ``credit_decisions``
+    (loans).  On a cache miss or first run the aggregator populates from adapters.
+    Never update rows — replace the snapshot entry for the account_ref instead.
+    """
+
+    __tablename__ = "loan_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid,
+        comment="UUID4 primary key",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+        comment="Row creation timestamp (UTC)",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
+        comment="Last update timestamp (UTC)",
+    )
+
+    # ── Identifying attributes ─────────────────────────────────────────────
+    product_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, index=True,
+        comment="credit_card | mortgage",
+    )
+    decision_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True,
+        comment="FK → decisions.id (nullable for mortgages)",
+    )
+    account_ref: Mapped[str] = mapped_column(
+        String(128), nullable=False, index=True,
+        comment="Internal account reference (hashed for PII)",
+    )
+
+    # ── Origination data ───────────────────────────────────────────────────
+    origination_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+        comment="Date the account was originated",
+    )
+    original_balance: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Credit cards: credit limit. Mortgages: loan amount.",
+    )
+    original_ltv: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True,
+        comment="Loan-to-value at origination. Mortgages only; NULL for credit cards.",
+    )
+    original_term_months: Mapped[Optional[int]] = mapped_column(
+        nullable=True,
+        comment="Original term in months (12–360)",
+    )
+    origination_channel: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True,
+        comment="digital | branch | broker",
+    )
+    interest_rate: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True,
+        comment="Annualised interest rate, e.g. 0.1999 = 19.99%",
+    )
+    risk_segment: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True, index=True,
+        comment="prime | near_prime | high_risk | thin_file",
+    )
+
+    # ── Current balance snapshot ───────────────────────────────────────────
+    current_balance: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Outstanding balance — updated monthly by settlement job",
+    )
+    days_past_due: Mapped[Optional[int]] = mapped_column(
+        nullable=True,
+        comment="Current DPD bucket: 0 | 30 | 60 | 90 | 120+",
+    )
+    is_npl: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True,
+        comment="Non-performing: DPD >= 90",
+    )
+    is_charged_off: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True,
+        comment="Account has been charged off",
+    )
+
+    # ── Revenue attribution ────────────────────────────────────────────────
+    interest_income_mtd: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Month-to-date interest income for this account",
+    )
+    fee_income_mtd: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Month-to-date fee income for this account",
+    )
+    cost_of_funds_rate: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True,
+        comment="Internal FTP (funds transfer pricing) rate",
+    )
+
+    # ── Marketing / acquisition ────────────────────────────────────────────
+    acquisition_cost: Mapped[Optional[float]] = mapped_column(
+        Numeric(10, 2), nullable=True,
+        comment="Customer acquisition cost at origination (CAC)",
+    )
+    acquisition_channel: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True,
+        comment="organic | paid_search | affiliate | broker",
+    )
+
+    def __repr__(self) -> str:
+        return f"<LoanRecord id={self.id} product={self.product_type} ref={self.account_ref}>"
+
+
+class MortgageApplication(Base):
+    """Local cache of mortgage application records.
+
+    Sourced from BigQuery ``loan_applications`` WHERE ``loan_type = 'mortgage'``.
+    """
+
+    __tablename__ = "mortgage_applications"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid,
+        comment="UUID4 primary key",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
+    )
+
+    application_ref: Mapped[str] = mapped_column(
+        String(128), nullable=False, unique=True, index=True,
+        comment="External application reference",
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, index=True,
+        comment="submitted | in_review | approved | declined | funded | withdrawn",
+    )
+    loan_amount: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Requested / approved loan amount",
+    )
+    property_value: Mapped[Optional[float]] = mapped_column(
+        Numeric(14, 2), nullable=True,
+        comment="Estimated property value at application",
+    )
+    ltv_ratio: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True,
+        comment="Loan-to-value ratio at application",
+    )
+    applicant_income: Mapped[Optional[float]] = mapped_column(
+        Numeric(12, 2), nullable=True,
+        comment="Annual gross income of primary applicant",
+    )
+    dti_ratio: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True,
+        comment="Debt-to-income ratio at application",
+    )
+    credit_score: Mapped[Optional[int]] = mapped_column(
+        nullable=True,
+        comment="Bureau credit score at application",
+    )
+    product_type: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True,
+        comment="fixed_2yr | fixed_5yr | tracker | variable",
+    )
+    processing_stage: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True,
+        comment="document_collection | valuation | underwriting | offer",
+    )
+    stp_processed: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True,
+        comment="True if processed without human intervention (STP)",
+    )
+    processing_days: Mapped[Optional[int]] = mapped_column(
+        nullable=True,
+        comment="Calendar days from submission to current status",
+    )
+    underwriter_id: Mapped[Optional[str]] = mapped_column(
+        String(128), nullable=True,
+        comment="Underwriter identifier; NULL if STP",
+    )
+    officer_notes: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True,
+        comment="Free-text underwriter notes; NULL if STP",
+    )
+
+    def __repr__(self) -> str:
+        return f"<MortgageApplication id={self.id} ref={self.application_ref} status={self.status}>"
+
+
+class PortfolioSnapshot(Base):
+    """Monthly portfolio roll-up written by the analytics aggregator.
+
+    Aggregates both CC Parquet + BigQuery loan sources into a single monthly
+    row per product_type.  Serves as the input for the projections engine
+    (Section 7 — linear regression + Monte Carlo).
+    """
+
+    __tablename__ = "portfolio_snapshots"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_new_uuid,
+        comment="UUID4 primary key",
+    )
+    snapshot_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True,
+        comment="Last day of the reporting month (UTC midnight)",
+    )
+    product_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, index=True,
+        comment="credit_card | mortgage | total",
+    )
+
+    # ── Volume ─────────────────────────────────────────────────────────────
+    total_accounts: Mapped[Optional[int]] = mapped_column(nullable=True, comment="Total accounts in portfolio")
+    active_accounts: Mapped[Optional[int]] = mapped_column(nullable=True, comment="Accounts with non-zero balance")
+    new_originations_count: Mapped[Optional[int]] = mapped_column(nullable=True, comment="New accounts originated in the month")
+    new_originations_volume: Mapped[Optional[float]] = mapped_column(
+        Numeric(16, 2), nullable=True, comment="New originations volume (GBP)",
+    )
+
+    # ── Balances ───────────────────────────────────────────────────────────
+    total_outstanding: Mapped[Optional[float]] = mapped_column(Numeric(16, 2), nullable=True, comment="Total outstanding balance (GBP)")
+    average_balance: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Average balance per account (GBP)")
+
+    # ── Revenue ────────────────────────────────────────────────────────────
+    total_interest_income: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Gross interest income (GBP)")
+    total_fee_income: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Fee income (GBP)")
+    total_revenue: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="total_interest_income + total_fee_income (GBP)")
+    cost_of_funds: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Total cost of funds (GBP)")
+    net_interest_income: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="NII = interest_income − cost_of_funds (GBP)")
+    net_interest_margin: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True, comment="NIM = NII / avg_earning_assets (ratio)",
+    )
+
+    # ── Risk ───────────────────────────────────────────────────────────────
+    npl_count: Mapped[Optional[int]] = mapped_column(nullable=True, comment="Number of NPL accounts (DPD90+)")
+    npl_balance: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Balance of NPL accounts (GBP)")
+    npl_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="npl_balance / total_outstanding (ratio)")
+    ecl_provision: Mapped[Optional[float]] = mapped_column(Numeric(14, 2), nullable=True, comment="Expected Credit Loss provision (GBP)")
+    net_charge_off_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="Annualised NCO rate (ratio)")
+
+    # ── Efficiency ─────────────────────────────────────────────────────────
+    cost_income_ratio: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="operating_costs / total_income (ratio)")
+    roe: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="Return on equity — annualised (ratio)")
+    roa: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="Return on assets — annualised (ratio)")
+    approval_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="approved / (approved + rejected) (ratio)")
+    stp_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4), nullable=True, comment="% applications processed without human touch (mortgages)")
+
+    # ── Customer ───────────────────────────────────────────────────────────
+    new_customers: Mapped[Optional[int]] = mapped_column(nullable=True, comment="New customers acquired in the month")
+    customer_acquisition_cost_avg: Mapped[Optional[float]] = mapped_column(
+        Numeric(10, 2), nullable=True, comment="Average CAC in the month (GBP)",
+    )
+    nps_score: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 2), nullable=True, comment="Net Promoter Score (−100 to +100)",
+    )
+
+    def __repr__(self) -> str:
+        return f"<PortfolioSnapshot id={self.id} date={self.snapshot_date} product={self.product_type}>"

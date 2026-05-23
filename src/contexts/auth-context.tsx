@@ -21,6 +21,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Guard: if Firebase was not initialised (missing/placeholder credentials),
+    // `auth` is a stub `{}` object. Calling onAuthStateChanged on it would throw
+    // a runtime error and crash the entire React tree. Resolve loading immediately
+    // so the app renders in an unauthenticated-but-functional state.
+    if (!auth || !(auth as { onAuthStateChanged?: unknown }).onAuthStateChanged) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
