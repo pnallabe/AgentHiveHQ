@@ -1,5 +1,3 @@
-
-'use server';
 /**
  * @fileOverview A Genkit flow for summarizing regulatory text.
  *
@@ -27,9 +25,6 @@ const RegulatoryUpdateOutputSchema = z.object({
 });
 export type RegulatoryUpdateOutput = z.infer<typeof RegulatoryUpdateOutputSchema>;
 
-export async function summarizeRegulatoryText(input: RegulatoryUpdateInput): Promise<RegulatoryUpdateOutput> {
-  return regulatoryTextSummarizerFlow(input);
-}
 
 const regulatorySummarizationPrompt = ai.definePrompt({
   name: 'regulatorySummarizationPrompt',
@@ -48,7 +43,7 @@ Do not include the date, source, or link in your direct response; these will be 
 `,
 });
 
-const regulatoryTextSummarizerFlow = ai.defineFlow(
+export const regulatoryTextSummarizerFlow = ai.defineFlow(
   {
     name: 'regulatoryTextSummarizerFlow',
     inputSchema: RegulatoryUpdateInputSchema,

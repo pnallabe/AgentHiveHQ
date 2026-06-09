@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { RegulatoryUpdateInput, RegulatoryUpdateOutput } from "@/ai/flows/regulatory-update-flow";
-import { summarizeRegulatoryText } from "@/ai/flows/regulatory-update-flow";
+import { summarizeRegulatoryText } from "@/ai/actions";
 import { AnimatedSection } from "@/components/landing/animated-section";
 
 // Placeholder texts that would normally come from a web scraper

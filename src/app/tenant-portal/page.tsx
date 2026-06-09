@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Link from "next/link";
 
 export default function TenantDashboard() {
   const { tenant, setTenant } = useTenant();
@@ -75,6 +76,36 @@ export default function TenantDashboard() {
             </select>
           </div>
         </header>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Quick Links & Dashboards</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <LinkCard 
+              title="Applicant Portal" 
+              description="Start a new loan application flow"
+              href="/tenant-portal/apply" 
+              icon="📝" 
+            />
+            <LinkCard 
+              title="Analytics Dashboards" 
+              description="View portfolio and risk analytics"
+              href="/analytics/overview" 
+              icon="📊" 
+            />
+            <LinkCard 
+              title="Governance Suite" 
+              description="Monitor AI decisions and bias"
+              href="/lab/governance" 
+              icon="⚖️" 
+            />
+            <LinkCard 
+              title="AI Copilot" 
+              description="Assist underwriters with AI"
+              href="/lab/copilot" 
+              icon="🤖" 
+            />
+          </div>
+        </section>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Portfolio Summary</h2>
@@ -142,5 +173,23 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <p className="text-sm text-gray-400">{label}</p>
       <p className="text-3xl font-bold text-white mt-2">{value}</p>
     </div>
+  );
+}
+
+function LinkCard({ title, description, href, icon }: { title: string; description: string; href: string; icon: string }) {
+  return (
+    <Link 
+      href={href} 
+      className="bg-[#111625] p-6 rounded-2xl border border-gray-800 hover:border-[#73B9FF] transition-all group flex flex-col justify-between"
+    >
+      <div>
+        <div className="text-2xl mb-3">{icon}</div>
+        <h3 className="text-lg font-bold text-white group-hover:text-[#73B9FF] transition-colors">{title}</h3>
+        <p className="text-sm text-gray-400 mt-2">{description}</p>
+      </div>
+      <div className="mt-4 text-[#17E8BD] text-sm font-semibold flex items-center gap-1">
+        Open <span className="group-hover:translate-x-1 transition-transform">→</span>
+      </div>
+    </Link>
   );
 }

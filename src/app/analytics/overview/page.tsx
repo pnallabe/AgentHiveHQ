@@ -22,7 +22,7 @@ import { AiBriefCard, type ExecutiveBrief } from "@/components/analytics/AiBrief
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sparkles, AlertTriangle } from "lucide-react";
-import { generateExecutiveBrief } from "@/ai/flows/executive-brief-flow";
+import { generateExecutiveBrief } from "@/ai/actions";
 import type { PeriodToken } from "@/components/analytics/PeriodPicker";
 import type { ProductFilter } from "@/components/analytics/ProductToggle";
 import type { KpiCardProps, FormatStyle } from "@/components/analytics/KpiCard";

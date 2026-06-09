@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Genkit Gemini 2.0 Flash flow for the AI Executive Brief.
  *
@@ -148,7 +147,7 @@ Respond ONLY with valid JSON matching the output schema.`;
 // Genkit flow
 // ─────────────────────────────────────────────────────────────────────────────
 
-const executiveBriefFlow = ai.defineFlow(
+export const executiveBriefFlow = ai.defineFlow(
   {
     name: 'executiveBriefFlow',
     inputSchema: ExecutiveBriefInputSchema,
@@ -178,19 +177,3 @@ const executiveBriefFlow = ai.defineFlow(
   }
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Server action — called from client components
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * generateExecutiveBrief — Next.js server action.
- *
- * Usage:
- *   import { generateExecutiveBrief } from '@/ai/flows/executive-brief-flow';
- *   const brief = await generateExecutiveBrief({ kpi_snapshot, tone });
- */
-export async function generateExecutiveBrief(
-  input: ExecutiveBriefInput
-): Promise<ExecutiveBriefOutput> {
-  return executiveBriefFlow(input);
-}
