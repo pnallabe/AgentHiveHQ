@@ -18,7 +18,7 @@ const STATIC_PRODUCTS = [
     name: "Underwriting Engine",
     description:
       "ML-powered credit decisions with income-first modelling for prime, near-prime, and thin-file applicants.",
-    href: "/lab/underwriting",
+    href: "/tenant-portal",
   },
   {
     icon: ShieldCheck,

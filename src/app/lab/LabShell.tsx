@@ -28,7 +28,7 @@ import { useAuth } from "@/contexts/auth-context";
 // ---------------------------------------------------------------------------
 
 const PRODUCT_NAV = [
-  { href: "/lab/underwriting",  label: "Underwriting Engine",    Icon: BrainCircuit  },
+  { href: "/tenant-portal",  label: "Underwriting Engine",    Icon: BrainCircuit  },
   // { href: "/lab/copilot",       label: "AI Copilot",            Icon: MessageSquare }, // temporarily disabled
   { href: "/lab/governance",    label: "Governance Suite",      Icon: BarChart3     },
   { href: "/lab/integrations",  label: "Integration Gateway",   Icon: Plug          },

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const PRODUCTS = [
   {
-    href: "/lab/underwriting",
+    href: "/tenant-portal",
     title: "Underwriting Engine",
     description:
       "Submit applicant profiles and receive real-time AI credit decisions with SHAP explanations and full audit trails.",

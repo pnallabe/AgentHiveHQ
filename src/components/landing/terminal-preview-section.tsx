@@ -221,7 +221,7 @@ export function TerminalPreviewSection() {
             variant="outline"
             className="border-surface-border text-zinc-300 hover:bg-surface-overlay hover:text-zinc-100"
           >
-            <Link href="/lab/underwriting">
+            <Link href="/tenant-portal">
               Run Your Own
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </Link>
