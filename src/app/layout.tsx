@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
+import { TenantProvider } from '@/contexts/TenantContext';
 import { GeistMono } from 'geist/font/mono';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { cn } from '@/lib/utils';
@@ -49,9 +50,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <PageTransitionWrapper>
-              {children}
-            </PageTransitionWrapper>
+            <TenantProvider>
+              <PageTransitionWrapper>
+                {children}
+              </PageTransitionWrapper>
+            </TenantProvider>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

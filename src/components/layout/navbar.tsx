@@ -25,6 +25,7 @@ const NAV_LINKS = [
   { href: "/#how-it-works", label: "Platform"       },
   { href: "/case-studies",  label: "Case Studies"   },
   { href: "/#pricing",      label: "Pricing"        },
+  { href: "/tenant-portal", label: "Tenant Portal"  },
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────
