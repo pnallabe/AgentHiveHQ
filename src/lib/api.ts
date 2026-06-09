@@ -68,9 +68,7 @@ export class ApiError extends Error {
  */
 const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 if (!_rawApiUrl && process.env.NODE_ENV === "production") {
-  throw new Error(
-    "[api] NEXT_PUBLIC_API_URL is not set. Add it to your environment before building."
-  );
+  console.warn("[api] NEXT_PUBLIC_API_URL is not set. Defaulting to http://localhost:8000.");
 }
 const BASE_URL = _rawApiUrl ?? "http://localhost:8000";
 
