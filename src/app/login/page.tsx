@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithEmailAndPassword,
@@ -11,6 +11,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { redirectUserToCrp, sanitizeNextPath } from "@/lib/crp-routing";
 
 function resolveGoogleError(err: any): string {
   switch (err?.code) {
@@ -87,6 +88,22 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirectToCrp = async (fallbackPath = "/dashboard") => {
+    const nextPath = sanitizeNextPath(searchParams.get("next") ?? fallbackPath);
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      router.push(fallbackPath);
+      return;
+    }
+
+    const redirected = await redirectUserToCrp(currentUser, nextPath);
+    if (!redirected) {
+      setError("No tenant could be resolved for your account. Contact your administrator.");
+      router.push("/dashboard");
+    }
+  };
 
   // Handle popup-blocked → redirect fallback: Firebase redirects back to /login
   // with the auth result in the URL. getRedirectResult() resolves it on mount.
@@ -96,7 +113,7 @@ export default function LoginPage() {
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
-          router.push("/dashboard");
+          redirectToCrp();
         } else {
           setGoogleLoading(false);
         }
@@ -117,8 +134,12 @@ export default function LoginPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const redirected = await redirectUserToCrp(credential.user, sanitizeNextPath(searchParams.get("next")));
+      if (!redirected) {
+        setError("No tenant could be resolved for your account. Contact your administrator.");
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       if (
         err.code === "auth/user-not-found" ||
@@ -142,8 +163,12 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
+      const credential = await signInWithPopup(auth, provider);
+      const redirected = await redirectUserToCrp(credential.user, sanitizeNextPath(searchParams.get("next")));
+      if (!redirected) {
+        setError("No tenant could be resolved for your account. Contact your administrator.");
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setGoogleLoading(false);
       const msg = resolveGoogleError(err);

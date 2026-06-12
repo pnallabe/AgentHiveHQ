@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   createUserWithEmailAndPassword,
@@ -11,6 +11,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { redirectUserToCrp, sanitizeNextPath } from "@/lib/crp-routing";
 
 function resolveGoogleError(err: any): string {
   switch (err?.code) {
@@ -95,6 +96,21 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirectToCrp = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      router.push("/dashboard");
+      return;
+    }
+
+    const redirected = await redirectUserToCrp(currentUser, sanitizeNextPath(searchParams.get("next")));
+    if (!redirected) {
+      setError("No tenant could be resolved for your account. Contact your administrator.");
+      router.push("/dashboard");
+    }
+  };
 
   // Handle redirect result from Google sign-up
   useEffect(() => {
@@ -102,7 +118,7 @@ export default function SignUpPage() {
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
-          router.push("/dashboard");
+          redirectToCrp();
         } else {
           setGoogleLoading(false);
         }
@@ -128,8 +144,12 @@ export default function SignUpPage() {
     }
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const redirected = await redirectUserToCrp(credential.user, sanitizeNextPath(searchParams.get("next")));
+      if (!redirected) {
+        setError("No tenant could be resolved for your account. Contact your administrator.");
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       if (err.code === "auth/email-already-in-use") {
         setError("An account with that email already exists.");

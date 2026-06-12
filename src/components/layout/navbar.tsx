@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/shared/Logo";
 import { DemoModeToggle } from "@/components/lab/DemoModeToggle";
+import { redirectUserToCrp } from "@/lib/crp-routing";
 
 // ── Nav link definitions ─────────────────────────────────────────────────────
 
@@ -52,6 +53,20 @@ export function Navbar() {
       router.push("/");
     } catch {
       toast({ title: "Logout failed", variant: "destructive" });
+    }
+    setMobileOpen(false);
+  };
+
+  const handleCrpNavigation = async (nextPath: "/dashboard" | "/reports" | "/settings") => {
+    if (!user) return;
+
+    const redirected = await redirectUserToCrp(user, nextPath);
+    if (!redirected) {
+      toast({
+        title: "Tenant routing unavailable",
+        description: "Your account does not have an active tenant mapping.",
+        variant: "destructive",
+      });
     }
     setMobileOpen(false);
   };
@@ -117,18 +132,20 @@ export function Navbar() {
                     Logout
                   </Button>
                   <Button
-                    asChild
                     variant="ghost"
                     size="sm"
                     className="hidden text-zinc-400 hover:text-zinc-100 md:inline-flex gap-1.5"
+                    onClick={() => handleCrpNavigation("/reports")}
                   >
-                    <Link href="/analytics/overview">
-                      <TrendingUp className="h-3.5 w-3.5" aria-hidden />
-                      Analytics
-                    </Link>
+                    <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                    Analytics
                   </Button>
-                  <Button asChild size="sm" className="hidden bg-brand-500 hover:bg-brand-600 text-white md:inline-flex">
-                    <Link href="/lab">Product Lab</Link>
+                  <Button
+                    size="sm"
+                    className="hidden bg-brand-500 hover:bg-brand-600 text-white md:inline-flex"
+                    onClick={() => handleCrpNavigation("/dashboard")}
+                  >
+                    Tenant Portal
                   </Button>
                 </>
               ) : (
@@ -189,9 +206,9 @@ export function Navbar() {
                     </Link>
                   ))}
                   {user && (
-                    <Link
-                      href="/analytics/overview"
-                      onClick={() => setMobileOpen(false)}
+                    <button
+                      type="button"
+                      onClick={() => handleCrpNavigation("/reports")}
                       className={cn(
                         "rounded-lg px-3 py-2.5 text-base transition-colors flex items-center gap-2",
                         isActive("/analytics")
@@ -201,7 +218,7 @@ export function Navbar() {
                     >
                       <TrendingUp className="h-4 w-4" aria-hidden />
                       Analytics
-                    </Link>
+                    </button>
                   )}
                 </nav>
                 <div className="mt-auto space-y-2 pt-6 border-t border-surface-border">
