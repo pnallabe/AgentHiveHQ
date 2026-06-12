@@ -25,10 +25,10 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://agenthivehq.com'),
-  title: 'AgentHive – AI Credit Decisioning Platform',
+  metadataBase: new URL('https://helixdecisions.ai'),
+  title: 'Helix Decisions – AI Credit Decisioning Platform',
   description: 'Production-ready AI underwriting, explainability, and governance for lenders who cannot afford guesswork.',
-  keywords: "AI credit decisioning, underwriting, SHAP explainability, model governance, FCRA compliance, AgentHive",
+  keywords: "AI credit decisioning, underwriting, SHAP explainability, model governance, FCRA compliance, Helix Decisions",
 };
 
 export default function RootLayout({

@@ -36,7 +36,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     category: "Thin-File Lending",
     title: "18% lift in approval rate for credit-invisible applicants",
     summary:
-      "A regional CDFI used AgentHive to expand credit access to consumers with fewer than 3 trade-lines — without relaxing risk thresholds.",
+      "A regional CDFI used Helix Decisions to expand credit access to consumers with fewer than 3 trade-lines — without relaxing risk thresholds.",
     stat: "+18%",
     statLabel: "approval-rate lift",
     statColor: "text-approve-base",
@@ -50,7 +50,7 @@ export const CASE_STUDIES: CaseStudy[] = [
       {
         heading: "What we built",
         body:
-          "AgentHive's underwriting module was configured with an alternate-data feature set: cash-flow volatility from bank-feed data, rent-payment history (via Plaid), and utility trade-lines. The SHAP explainability layer surfaced which signals drove each decision — satisfying FCRA adverse-action disclosure requirements automatically.",
+          "Helix Decisions's underwriting module was configured with an alternate-data feature set: cash-flow volatility from bank-feed data, rent-payment history (via Plaid), and utility trade-lines. The SHAP explainability layer surfaced which signals drove each decision — satisfying FCRA adverse-action disclosure requirements automatically.",
       },
       {
         heading: "Results",
@@ -88,7 +88,7 @@ export const CASE_STUDIES: CaseStudy[] = [
       {
         heading: "What we built",
         body:
-          "AgentHive's feature engineering pipeline constructed a 12-month rolling income-volatility index from bank-feed transactions. The rules engine added an income-stability gate on top of the ML score, with automatic SHAP reason codes for every decline.",
+          "Helix Decisions's feature engineering pipeline constructed a 12-month rolling income-volatility index from bank-feed transactions. The rules engine added an income-stability gate on top of the ML score, with automatic SHAP reason codes for every decline.",
       },
       {
         heading: "Results",
@@ -103,7 +103,7 @@ export const CASE_STUDIES: CaseStudy[] = [
           ],
         },
         blockquote:
-          "\"We didn't shrink our book — we just stopped lending to volatility risk we couldn't see. AgentHive made that volatility visible.\" — Head of Risk",
+          "\"We didn't shrink our book — we just stopped lending to volatility risk we couldn't see. Helix Decisions made that volatility visible.\" — Head of Risk",
       },
     ],
   },
@@ -112,7 +112,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     category: "Model Governance",
     title: "Zero exam findings across two federal regulatory reviews",
     summary:
-      "A mid-size bank used AgentHive's governance dashboard to achieve clean SR 11-7 compliance during consecutive OCC and Federal Reserve model-risk examinations.",
+      "A mid-size bank used Helix Decisions's governance dashboard to achieve clean SR 11-7 compliance during consecutive OCC and Federal Reserve model-risk examinations.",
     stat: "0",
     statLabel: "exam findings",
     statColor: "text-brand-300",
@@ -126,7 +126,7 @@ export const CASE_STUDIES: CaseStudy[] = [
       {
         heading: "What we built",
         body:
-          "AgentHive's governance module provided real-time approval-rate monitoring by demographic segment with adverse-impact-ratio alerts, immutable hash-chained audit logs (ISO 8601) exportable as signed JSON for examiner review, and automated SR 11-7 documentation — model card, feature inventory, and ongoing monitoring schedule — generated from the live system.",
+          "Helix Decisions's governance module provided real-time approval-rate monitoring by demographic segment with adverse-impact-ratio alerts, immutable hash-chained audit logs (ISO 8601) exportable as signed JSON for examiner review, and automated SR 11-7 documentation — model card, feature inventory, and ongoing monitoring schedule — generated from the live system.",
       },
       {
         heading: "Results",

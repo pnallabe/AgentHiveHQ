@@ -155,7 +155,7 @@ export function HeroSection() {
           <div className="relative mx-auto overflow-hidden rounded-2xl border border-surface-border shadow-2xl shadow-brand-900/20">
             <Image
               src="/images/dashboard-preview.svg"
-              alt="AgentHive underwriting dashboard showing approved decision, risk score 0.76, and SHAP feature importance chart"
+              alt="Helix Decisions underwriting dashboard showing approved decision, risk score 0.76, and SHAP feature importance chart"
               width={900}
               height={480}
               priority
