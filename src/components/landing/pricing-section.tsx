@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 
 // ── Tier definitions ─────────────────────────────────────────────────────────
 
-const DEMO_BOOKING_URL = "https://calendly.com/agenthivehq/demo";
+// TODO: replace with helixdecisions.ai Calendly link
+const DEMO_BOOKING_URL = "https://calendly.com/helixdecisions/demo";
 
 interface Tier {
   id:          string;

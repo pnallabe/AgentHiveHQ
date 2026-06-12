@@ -7,7 +7,8 @@ import { fadeInUp, defaultViewport } from "@/lib/animations";
 import { ArrowRight, BookOpen } from "lucide-react";
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const DEMO_BOOKING_URL = "https://calendly.com/agenthivehq/demo";
+// TODO: replace with helixdecisions.ai Calendly link
+const DEMO_BOOKING_URL = "https://calendly.com/helixdecisions/demo";
 
 export function ContactSection() {
   const prefersReduced = useReducedMotion();

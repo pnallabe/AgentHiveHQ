@@ -108,7 +108,7 @@ function LoginPageContent() {
 
     const redirected = await redirectUserToCrp(currentUser, nextPath);
     if (!redirected) {
-      setError("No tenant could be resolved for your account. Contact your administrator.");
+      setError("Your account is not linked to any tenant. Contact support@helixdecisions.ai.");
       router.push("/dashboard");
     }
   };
@@ -145,7 +145,7 @@ function LoginPageContent() {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const redirected = await redirectUserToCrp(credential.user, sanitizeNextPath(searchParams.get("next")));
       if (!redirected) {
-        setError("No tenant could be resolved for your account. Contact your administrator.");
+        setError("Your account is not linked to any tenant. Contact support@helixdecisions.ai.");
         router.push("/dashboard");
       }
     } catch (err: any) {
@@ -174,7 +174,7 @@ function LoginPageContent() {
       const credential = await signInWithPopup(auth, provider);
       const redirected = await redirectUserToCrp(credential.user, sanitizeNextPath(searchParams.get("next")));
       if (!redirected) {
-        setError("No tenant could be resolved for your account. Contact your administrator.");
+        setError("Your account is not linked to any tenant. Contact support@helixdecisions.ai.");
         router.push("/dashboard");
       }
     } catch (err: any) {
@@ -199,7 +199,7 @@ function LoginPageContent() {
           <div className="space-y-1">
             <h1 className="text-2xl font-bold text-zinc-100">Welcome back</h1>
             <p className="text-sm text-zinc-500">
-              Sign in to your AgentHive account.
+              Sign in to your Helix Decisions account.
             </p>
           </div>
 

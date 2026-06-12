@@ -9,8 +9,8 @@ interface LogoProps {
 }
 
 /**
- * AgentHive hexagonal SVG logomark + wordmark.
- * Hexagon fill uses brand-500 electric blue.
+ * Helix Decisions double-helix SVG logomark + wordmark.
+ * Two S-curve strands in brand-500 crossing twice, with three rungs.
  */
 export function Logo({
   href = "/",
@@ -27,21 +27,31 @@ export function Logo({
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {/* Hexagon path — flat-top orientation */}
+      {/* Strand 1 — front, full opacity */}
       <path
-        d="M14 2L24.7 8V20L14 26L3.3 20V8L14 2Z"
-        fill="currentColor"
+        d="M 8,4 C 8,9 20,9 20,14 C 20,19 8,19 8,24"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
         className="text-brand-500"
       />
-      {/* Inner hive cell detail */}
+      {/* Strand 2 — back, reduced opacity to show depth */}
       <path
-        d="M14 8L19.2 11V17L14 20L8.8 17V11L14 8Z"
+        d="M 20,4 C 20,9 8,9 8,14 C 8,19 20,19 20,24"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeOpacity="0.5"
         fill="none"
-        stroke="white"
-        strokeWidth="1.2"
-        strokeOpacity="0.9"
+        className="text-brand-500"
       />
-      <circle cx="14" cy="14" r="1.5" fill="white" fillOpacity="0.9" />
+      {/* Rung — above first crossing (y=9) */}
+      <line x1="10" y1="7" x2="18" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeOpacity="0.65" className="text-brand-500" />
+      {/* Rung — center, between the two crossings */}
+      <line x1="8" y1="14" x2="20" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeOpacity="0.65" className="text-brand-500" />
+      {/* Rung — below second crossing (y=19) */}
+      <line x1="10" y1="21" x2="18" y2="21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeOpacity="0.65" className="text-brand-500" />
     </svg>
   );
 
@@ -50,7 +60,7 @@ export function Logo({
       {mark}
       {showWordmark && (
         <span className="font-heading font-semibold text-lg leading-none tracking-tight text-foreground">
-          AgentHive
+          Helix Decisions
         </span>
       )}
     </span>

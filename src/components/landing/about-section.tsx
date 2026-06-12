@@ -9,8 +9,7 @@ export function AboutSection() {
             Who We Are
           </h2>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-            AgentHiveHQ is a frontier tech company building the next generation of autonomous agent-based products. 
-            Our mission is to make AI agents that augment human capability across domains—from compliance to research to automation.
+            Helix Decisions is a frontier AI company building compliant, explainable credit intelligence for modern lenders.
           </p>
         </AnimatedSection>
       </div>

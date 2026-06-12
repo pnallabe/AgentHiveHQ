@@ -1,6 +1,7 @@
 import type { User } from "firebase/auth";
 
 const DEFAULT_CRP_BASE_URL = "http://localhost:3005";
+const DEFAULT_API_URL = "http://localhost:8001";
 const LOOP_WINDOW_MS = 15_000;
 
 type TenantLike = string | { slug?: string; tenantSlug?: string; tenant_id?: string; tenantId?: string; id?: string };
@@ -97,6 +98,43 @@ function getCrpBaseUrl(): string {
   return configured && configured.trim().length > 0 ? configured : DEFAULT_CRP_BASE_URL;
 }
 
+function getApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  return configured && configured.trim().length > 0 ? configured : DEFAULT_API_URL;
+}
+
+export interface TenantMembership {
+  tenantSlug: string;
+  status: string;
+  role: string;
+}
+
+/**
+ * Fetch tenant memberships for the authenticated user from the CRP backend.
+ * Returns an empty array on 401/403 or network errors (never throws).
+ * Structured errors are logged for observability.
+ */
+export async function fetchTenantMemberships(idToken: string): Promise<TenantMembership[]> {
+  const endpoint = `${getApiBaseUrl()}/api/v1/tenants/me`;
+  try {
+    const res = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) {
+      console.error("fetchTenantMemberships: non-OK response", {
+        endpoint,
+        statusCode: res.status,
+      });
+      return [];
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? (data as TenantMembership[]) : [];
+  } catch (err) {
+    console.error("fetchTenantMemberships: request failed", { endpoint, err });
+    return [];
+  }
+}
+
 function shouldBlockLoop(target: string): boolean {
   if (typeof window === "undefined") return false;
 
@@ -124,8 +162,23 @@ function setBridgeState(target: string): string {
 }
 
 export async function buildCrpTenantUrlForUser(user: User, nextPath?: string | null): Promise<string | null> {
-  const tokenResult = await user.getIdTokenResult();
-  const tenantSlug = resolvePrimaryTenant(tokenResult.claims as Record<string, unknown>, user.email);
+  const idToken = await user.getIdToken();
+
+  // Prefer API-sourced memberships over JWT claims for live tenant lookup
+  const memberships = await fetchTenantMemberships(idToken);
+  let tenantSlug: string | null = null;
+
+  if (memberships.length > 0) {
+    const active = memberships.find((m) => m.status === "active") ?? memberships[0];
+    tenantSlug = canonicalizeTenantSlug(active.tenantSlug);
+  }
+
+  // Fall back to JWT claims if API returns no memberships
+  if (!tenantSlug) {
+    const tokenResult = await user.getIdTokenResult();
+    tenantSlug = resolvePrimaryTenant(tokenResult.claims as Record<string, unknown>, user.email);
+  }
+
   if (!tenantSlug) {
     return null;
   }

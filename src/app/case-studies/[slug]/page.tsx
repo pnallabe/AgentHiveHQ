@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const cs = getCaseStudy(slug);
   if (!cs) return {};
   return {
-    title: `${cs.title} — AgentHive`,
+    title: `${cs.title} — Helix Decisions`,
     description: cs.summary,
   };
 }
