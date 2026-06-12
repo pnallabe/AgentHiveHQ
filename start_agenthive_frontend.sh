@@ -14,7 +14,7 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
-# Use NEXT_PUBLIC_API_BASE_URL pointing to AgentHiveHQ backend
-export NEXT_PUBLIC_API_BASE_URL="http://localhost:8000"
+# Use NEXT_PUBLIC_API_URL pointing to AgentHiveHQ backend
+export NEXT_PUBLIC_API_URL="http://localhost:8000"
 
 exec npm run dev -- --port 9002
