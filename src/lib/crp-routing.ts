@@ -4,6 +4,40 @@ const DEFAULT_CRP_BASE_URL = "http://localhost:3005";
 const DEFAULT_API_URL = "http://localhost:8001";
 const LOOP_WINDOW_MS = 15_000;
 
+/**
+ * Exchange a Firebase ID token for a Helix HS256 tenant token by calling the
+ * tenant-portal's /api/auth/firebase bridge endpoint.  Returns the tenantSlug
+ * on success, null on failure (the rest of the login flow will fall back to
+ * JWT-claim resolution).
+ */
+async function exchangeFirebaseTokenForHelixSession(
+  idToken: string,
+  crpBaseUrl: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${crpBaseUrl}/api/auth/firebase`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.user?.tenant_slug) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("helix_tenant_token", data.token);
+        localStorage.setItem("helix_tenant_id", data.user.email ?? "");
+        localStorage.setItem("helix_tenant_slug", data.user.tenant_slug);
+        localStorage.setItem("helix_tenants", JSON.stringify([data.user.tenant_slug]));
+      }
+      return data.user.tenant_slug as string;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 type TenantLike = string | { slug?: string; tenantSlug?: string; tenant_id?: string; tenantId?: string; id?: string };
 
 function canonicalizeTenantSlug(value: string | null | undefined): string {
@@ -163,17 +197,21 @@ function setBridgeState(target: string): string {
 
 export async function buildCrpTenantUrlForUser(user: User, nextPath?: string | null): Promise<string | null> {
   const idToken = await user.getIdToken();
+  const crpBase = getCrpBaseUrl();
 
-  // Prefer API-sourced memberships over JWT claims for live tenant lookup
-  const memberships = await fetchTenantMemberships(idToken);
-  let tenantSlug: string | null = null;
+  // 1. Try the Firebase bridge (issues a Helix HS256 cookie + persists to localStorage)
+  let tenantSlug: string | null = await exchangeFirebaseTokenForHelixSession(idToken, crpBase);
 
-  if (memberships.length > 0) {
-    const active = memberships.find((m) => m.status === "active") ?? memberships[0];
-    tenantSlug = canonicalizeTenantSlug(active.tenantSlug);
+  // 2. Fall back to API membership lookup
+  if (!tenantSlug) {
+    const memberships = await fetchTenantMemberships(idToken);
+    if (memberships.length > 0) {
+      const active = memberships.find((m) => m.status === "active") ?? memberships[0];
+      tenantSlug = canonicalizeTenantSlug(active.tenantSlug);
+    }
   }
 
-  // Fall back to JWT claims if API returns no memberships
+  // 3. Fall back to JWT claims
   if (!tenantSlug) {
     const tokenResult = await user.getIdTokenResult();
     tenantSlug = resolvePrimaryTenant(tokenResult.claims as Record<string, unknown>, user.email);
@@ -183,7 +221,7 @@ export async function buildCrpTenantUrlForUser(user: User, nextPath?: string | n
     return null;
   }
 
-  const baseUrl = new URL(getCrpBaseUrl());
+  const baseUrl = new URL(crpBase);
   const normalizedPath = normalizeTenantPath(nextPath);
   baseUrl.pathname = `/t/${tenantSlug}${normalizedPath}`;
   const bridge = setBridgeState(baseUrl.pathname);
