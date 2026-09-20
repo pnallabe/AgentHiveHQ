@@ -24,10 +24,38 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://helixdecisions.ai'),
-  title: 'Helix Decisions – AI Credit Decisioning Platform',
-  description: 'Production-ready AI underwriting, explainability, and governance for lenders who cannot afford guesswork.',
-  keywords: "AI credit decisioning, underwriting, SHAP explainability, model governance, FCRA compliance, Helix Decisions",
+  metadataBase: new URL('https://agenthivehq.com'),
+  alternates: {
+    canonical: '/',
+  },
+  title: {
+    default: 'AgentHiveHQ | AI Credit Decisioning Platform',
+    template: '%s | AgentHiveHQ',
+  },
+  description:
+    'Production-ready AI underwriting, explainability, and governance tooling for lenders who need faster, safer credit decisions.',
+  keywords:
+    'AI credit decisioning, underwriting, explainability, model governance, FCRA compliance, credit risk workflow, AgentHiveHQ',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://agenthivehq.com',
+    siteName: 'AgentHiveHQ',
+    title: 'AgentHiveHQ | AI Credit Decisioning Platform',
+    description:
+      'Production-ready AI underwriting, explainability, and governance tooling for lenders who need faster, safer credit decisions.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default function RootLayout({
