@@ -67,6 +67,9 @@ __pycache__/
 
 # Local data files (large CSV/parquet datasets — use GCS/BQ instead)
 /data/
+agenthive_data/data_store/
+*.duckdb
+*.parquet
 
 # Firebase local state
 /.firebase/
