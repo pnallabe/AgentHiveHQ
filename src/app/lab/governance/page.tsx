@@ -190,12 +190,14 @@ function OverviewTab({
   period,
   onPeriodChange,
   onRefresh,
+  onFeatureChartErrorChange,
 }: {
   data: GovernanceDashboard | null;
   loading: boolean;
   period: Period;
   onPeriodChange: (p: Period) => void;
   onRefresh: () => void;
+  onFeatureChartErrorChange?: (err: boolean) => void;
 }) {
   const fmtMoney = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   const fmtPct   = (v: number) => `${(v * 100).toFixed(1)}%`;
@@ -282,7 +284,7 @@ function OverviewTab({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <FeatureImportanceChart onErrorChange={setFeatureChartError} />
+            <FeatureImportanceChart onErrorChange={onFeatureChartErrorChange} />
           </CardContent>
         </Card>
       </div>

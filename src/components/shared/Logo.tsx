@@ -59,8 +59,13 @@ export function Logo({
     <span className={cn("flex items-center gap-2", className)}>
       {mark}
       {showWordmark && (
-        <span className="font-heading font-semibold text-lg leading-none tracking-tight text-foreground">
-          Helix Decisions
+        <span className="flex items-baseline gap-1.5">
+          <span className="font-heading font-semibold text-lg leading-none tracking-tight text-foreground">
+            Helix Decisions
+          </span>
+          <span className="hidden sm:inline-block font-mono text-[10px] text-brand-400/90 font-medium uppercase tracking-wider">
+            by AgentHive
+          </span>
         </span>
       )}
     </span>

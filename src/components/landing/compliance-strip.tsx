@@ -5,12 +5,13 @@ import { motion, useReducedMotion } from "framer-motion";
 import { staggerChildren, fadeInUp, defaultViewport } from "@/lib/animations";
 
 const ITEMS = [
+  "SOC 2 Type II Aligned",
+  "256-Bit AES Encryption",
   "FCRA §615 Compliant",
   "SR 11-7 Model Governance",
+  "Single-Tenant VPC Support",
   "SHAP Explainability",
-  "Immutable Audit Logs",
-  "Adverse Impact Monitoring",
-  "ISO 8601 Timestamps",
+  "Immutable Audit Trail",
 ];
 
 export function ComplianceStrip() {

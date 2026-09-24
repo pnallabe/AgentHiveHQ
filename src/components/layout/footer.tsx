@@ -9,21 +9,24 @@ const FOOTER_NAV = [
       { label: "How It Works",  href: "/#how-it-works"   },
       { label: "Case Studies",  href: "/case-studies"    },
       { label: "Product Lab",   href: "/lab"             },
+      { label: "Pricing",       href: "/#pricing"        },
     ],
   },
   {
-    heading: "Legal",
+    heading: "Engineering",
     links: [
-      { label: "Privacy Policy",    href: "/privacy-policy"   },
-      { label: "Terms of Service",  href: "/terms-of-service" },
+      { label: "Architecture",  href: "/engineering"     },
+      { label: "Tech Stack",    href: "/engineering#stack" },
+      { label: "API Docs",      href: "/lab/underwriting" },
+      { label: "GitHub Repos",  href: "https://github.com/pnallabe/AgentHiveHQ" },
     ],
   },
   {
-    heading: "Compliance",
+    heading: "Company",
     links: [
-      { label: "FCRA §615",       href: "#" },
-      { label: "SR 11-7",         href: "#" },
-      { label: "SHAP Audit Logs", href: "#" },
+      { label: "About Us",       href: "/about"           },
+      { label: "Privacy Policy", href: "/privacy-policy"   },
+      { label: "Terms of Service", href: "/terms-of-service" },
     ],
   },
 ];
