@@ -45,13 +45,23 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ─────────────────────────────────────────────────────────────────
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.allowed_origins_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    origins = settings.allowed_origins_list
+    if "*" in origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=r"https?://.*",
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    else:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     # ── Startup / shutdown ────────────────────────────────────────────────────
     @application.on_event("startup")

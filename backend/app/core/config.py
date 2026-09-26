@@ -32,7 +32,17 @@ class Settings(BaseSettings):
 
     # ── CORS ────────────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: str = Field(
-        default="http://localhost:9002,http://localhost:3000",
+        default=(
+            "http://localhost:9002,"
+            "http://localhost:3000,"
+            "http://127.0.0.1:3000,"
+            "http://127.0.0.1:9002,"
+            "https://agenthivehq.com,"
+            "https://www.agenthivehq.com,"
+            "https://agenthivehq-landing.firebaseapp.com,"
+            "https://agenthivehq-landing.web.app,"
+            "https://studio--agenthivehq-landing.us-central1.hosted.app"
+        ),
         description="Comma-separated list of allowed CORS origins",
     )
 
