@@ -28,6 +28,30 @@ const DECISION_STYLE: Record<string, { label: string; cls: string; Icon: typeof 
   review: { label: "Manual Review", cls: "text-amber-300", Icon: AlertCircle },
 };
 
+// The backend returns reason codes as rich objects; the shared TS type says
+// string[]. Handle both defensively.
+type ReasonCodeShape =
+  | string
+  | { code?: string; fcra_code?: string; description?: string };
+
+function ReasonCodeLine({ code }: { code: ReasonCodeShape }) {
+  if (typeof code === "string") {
+    return (
+      <p className="mt-3 border-t border-surface-border pt-2 text-[11px] leading-relaxed text-zinc-500">
+        {code.replace(/_/g, " ").toLowerCase()}
+      </p>
+    );
+  }
+  return (
+    <p className="mt-3 border-t border-surface-border pt-2 text-[11px] leading-relaxed text-zinc-500">
+      {code.fcra_code && (
+        <span className="font-mono text-amber-400">{code.fcra_code} — </span>
+      )}
+      {code.description ?? code.code ?? ""}
+    </p>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
@@ -166,12 +190,7 @@ export function UseCaseCard({ useCase }: { useCase: UseCase }) {
           )}
 
           {result.reason_codes && result.reason_codes.length > 0 && (
-            <p className="mt-3 border-t border-surface-border pt-2 text-[11px] leading-relaxed text-zinc-500">
-              {result.fcra_codes && result.fcra_codes.length > 0 && (
-                <span className="font-mono text-amber-400">{result.fcra_codes[0]} — </span>
-              )}
-              {result.reason_codes[0].replace(/_/g, " ").toLowerCase()}
-            </p>
+            <ReasonCodeLine code={result.reason_codes[0]} />
           )}
         </div>
       )}
