@@ -34,7 +34,13 @@ from app.core.dependencies import (
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.underwriting.schemas import ProblemDetail
-from app.shared.db_models import AuditLog, DecisionRecord, Tenant, TenantMembership
+from app.shared.db_models import (
+    AuditLog,
+    DecisionRecord,
+    Tenant,
+    TenantApiKey,
+    TenantMembership,
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -419,3 +425,140 @@ async def get_usage(
         "unlimited": limit is None,
         "utilization_pct": round(used / limit * 100, 1) if limit else None,
     }
+
+
+# ── API keys ──────────────────────────────────────────────────────────────────
+
+#: Scopes a key may be granted. Keep in sync with endpoint enforcement.
+API_KEY_SCOPES = ("decisions:write", "decisions:read", "governance:read")
+
+
+class CreateApiKeyRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=128)
+    scopes: list[str] = Field(default_factory=lambda: ["decisions:write"])
+
+
+def _key_payload(k: TenantApiKey) -> dict[str, Any]:
+    return {
+        "id": k.id,
+        "name": k.name,
+        "key_prefix": k.key_prefix,
+        "scopes": k.scopes,
+        "created_by": k.created_by,
+        "created_at": k.created_at.isoformat() if k.created_at else None,
+        "last_used_at": k.last_used_at.isoformat() if k.last_used_at else None,
+        "revoked": k.revoked_at is not None,
+    }
+
+
+@router.get(
+    "/tenants/me/api-keys",
+    summary="List API keys (admin only)",
+)
+async def list_api_keys(
+    tenant: TenantContext = Depends(require_tenant_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    result = await db.execute(
+        select(TenantApiKey)
+        .where(TenantApiKey.tenant_id == tenant.tenant_id)
+        .order_by(TenantApiKey.created_at.desc())
+    )
+    keys = result.scalars().all()
+    return {"tenant_slug": tenant.slug, "api_keys": [_key_payload(k) for k in keys]}
+
+
+@router.post(
+    "/tenants/me/api-keys",
+    status_code=201,
+    summary="Create an API key (admin only)",
+    description=(
+        "Returns the plaintext key exactly once — store it securely. "
+        "Only the SHA-256 hash is persisted."
+    ),
+)
+async def create_api_key(
+    request: Request,
+    payload: CreateApiKeyRequest,
+    tenant: TenantContext = Depends(require_tenant_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    from app.modules.tenants.api_keys import generate_api_key  # noqa: PLC0415
+
+    invalid = [s for s in payload.scopes if s not in API_KEY_SCOPES]
+    if invalid:
+        return JSONResponse(
+            status_code=422,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/validation",
+                title="Invalid Scope",
+                status=422,
+                detail=(
+                    f"Unknown scope(s): {', '.join(invalid)}. "
+                    f"Allowed: {', '.join(API_KEY_SCOPES)}"
+                ),
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+    generated = generate_api_key()
+    key = TenantApiKey(
+        tenant_id=tenant.tenant_id,
+        name=payload.name.strip(),
+        key_prefix=generated.prefix,
+        key_hash=generated.key_hash,
+        scopes=payload.scopes,
+        created_by=tenant.user_uid,
+    )
+    db.add(key)
+    await db.flush()
+
+    logger.info(
+        "API key created",
+        extra={"tenant": tenant.slug, "key_id": key.id, "by": tenant.user_uid},
+    )
+    return {
+        "api_key": _key_payload(key),
+        "plaintext_key": generated.plaintext,
+        "notice": "Store this key securely — it is shown only once.",
+    }
+
+
+@router.delete(
+    "/tenants/me/api-keys/{key_id}",
+    summary="Revoke an API key (admin only)",
+)
+async def revoke_api_key(
+    request: Request,
+    key_id: str,
+    tenant: TenantContext = Depends(require_tenant_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    result = await db.execute(
+        select(TenantApiKey).where(
+            TenantApiKey.id == key_id,
+            TenantApiKey.tenant_id == tenant.tenant_id,
+        )
+    )
+    key = result.scalar_one_or_none()
+    if key is None:
+        return JSONResponse(
+            status_code=404,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/not-found",
+                title="Key Not Found",
+                status=404,
+                detail="No API key with that ID in your tenant.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+    if key.revoked_at is None:
+        key.revoked_at = datetime.now(tz=timezone.utc)
+    logger.info(
+        "API key revoked",
+        extra={"tenant": tenant.slug, "key_id": key_id, "by": tenant.user_uid},
+    )
+    return {"revoked": True, "key_id": key_id}

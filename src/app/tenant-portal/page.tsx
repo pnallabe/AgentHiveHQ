@@ -105,6 +105,12 @@ export default function TenantDashboard() {
               href="/tenant-portal/members"
               icon="👥"
             />
+            <LinkCard
+              title="API Keys"
+              description="Programmatic access credentials"
+              href="/tenant-portal/api-keys"
+              icon="🔑"
+            />
           </div>
         </section>
       </div>

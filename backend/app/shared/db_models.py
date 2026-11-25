@@ -245,6 +245,74 @@ class TenantMembership(Base):
         return f"<TenantMembership tenant={self.tenant_id} uid={self.user_uid} role={self.role}>"
 
 
+class TenantApiKey(Base):
+    """A hashed API key for programmatic tenant access (REST API).
+
+    Only the SHA-256 hash of the secret is stored — the plaintext is shown
+    once at creation and never persisted. Keys authenticate via the
+    ``X-AgentHive-Key`` header and are scoped per tenant.
+    """
+
+    __tablename__ = "tenant_api_keys"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=_new_uuid,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        comment="Human label, e.g. 'production LOS'",
+    )
+    key_prefix: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        index=True,
+        comment="First chars of the key (ahk_...) for identification in lists",
+    )
+    key_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+        comment="SHA-256 hex digest of the full key",
+    )
+    scopes: Mapped[list] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        comment="e.g. ['decisions:write', 'governance:read']",
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        comment="user_uid of the admin who created the key",
+    )
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="NULL while active; set when revoked",
+    )
+
+    def __repr__(self) -> str:
+        return f"<TenantApiKey id={self.id} prefix={self.key_prefix} tenant={self.tenant_id}>"
+
+
 class TenantInquiry(Base):
     """Inbound 'request a tenant' submission from the public signup form."""
 

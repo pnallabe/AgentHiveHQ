@@ -17,7 +17,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException, Security
+from fastapi import Depends, Header, HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.database import get_db
@@ -283,3 +283,79 @@ def require_tenant_role(*allowed: str):
         return ctx
 
     return _checker
+
+
+# ---------------------------------------------------------------------------
+# API-key authentication (programmatic access)
+#
+# Accepts ``X-AgentHive-Key: ahk_...`` as an alternative to a Firebase Bearer
+# token. Resolves to a TenantContext with the key's tenant and a synthetic
+# ``api-key`` role. Scope enforcement is applied by the calling endpoint.
+# ---------------------------------------------------------------------------
+
+_API_KEY_HEADER = "x-agenthive-key"
+
+
+async def require_tenant_or_api_key(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer),
+    db=Depends(get_db),
+) -> TenantContext:
+    """Resolve tenant from an API key header, falling back to Firebase auth.
+
+    Precedence: ``X-AgentHive-Key`` header wins when present; otherwise the
+    Firebase Bearer token path (``require_tenant``) is used.
+    """
+    if _SKIP_AUTH:
+        return TenantContext(
+            tenant_id="dev-tenant",
+            slug="dev-tenant",
+            user_uid="dev-user",
+            email="dev@localhost",
+            role="admin",
+        )
+
+    api_key = request.headers.get(_API_KEY_HEADER)
+    if api_key:
+        from app.modules.tenants.api_keys import verify_api_key  # noqa: PLC0415
+        from app.shared.db_models import Tenant  # noqa: PLC0415
+        from sqlalchemy import select  # noqa: PLC0415
+
+        key = await verify_api_key(db, api_key)
+        if key is None:
+            raise HTTPException(status_code=401, detail="Invalid or revoked API key")
+        result = await db.execute(
+            select(Tenant).where(Tenant.id == key.tenant_id, Tenant.status == "active")
+        )
+        tenant_row = result.scalar_one_or_none()
+        if tenant_row is None:
+            raise HTTPException(status_code=403, detail="Tenant is not active")
+        return TenantContext(
+            tenant_id=key.tenant_id,
+            slug=tenant_row.slug,
+            user_uid=f"api-key:{key.id}",
+            email=None,
+            role="api-key",
+        )
+
+    # Fall back to Firebase Bearer token.
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Provide X-AgentHive-Key or a Firebase Bearer token",
+        )
+    try:
+        from app.core.firebase_admin import verify_id_token
+
+        claims = await asyncio.to_thread(verify_id_token, credentials.credentials)
+    except Exception as exc:
+        logger.warning("Firebase token verification failed: %s", exc)
+        raise HTTPException(status_code=401, detail="Invalid or expired Firebase token") from exc
+
+    ctx = await _resolve_tenant(claims, db)
+    if ctx is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Your account is not linked to an active tenant.",
+        )
+    return ctx
