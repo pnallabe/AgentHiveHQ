@@ -34,6 +34,11 @@ export default function CaseStudiesPage() {
             See how lending teams use Helix Decisions to approve more qualified
             borrowers, shrink compliance risk, and defend every decision.
           </p>
+          <p className="max-w-lg rounded-lg border border-surface-border bg-surface-raised px-4 py-2 text-xs text-zinc-500">
+            These are illustrative implementation scenarios based on common
+            lending use cases — not named customer results. Metrics shown are
+            representative targets.
+          </p>
         </div>
 
         {/* Cards */}

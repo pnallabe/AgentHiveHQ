@@ -8,16 +8,18 @@ import { ChevronRight, ArrowRight } from "lucide-react";
 import { fadeInUp, fadeInDown, fadeIn } from "@/lib/animations";
 
 // ── Metric ticker data ───────────────────────────────────────────────────────
+// Demo-environment figures (synthetic data), shown to illustrate the dashboard.
+// Framed as such in the UI to stay honest with technical buyers.
 
 const TICKER_ITEMS = [
   { label: "Avg Decision Time",  value: "340ms"        },
   { label: "Approval Rate",      value: "71.3%"        },
-  { label: "Decisions Today",    value: "1,247"        },
+  { label: "Decisions (demo)",   value: "1,247"        },
   { label: "Model AUC",          value: "0.847"        },
   { label: "Bias Flags",         value: "0 active"     },
   { label: "Rules Evaluated",    value: "4 per req"    },
   { label: "P99 Latency",        value: "480ms"        },
-  { label: "Uptime",             value: "99.97%"       },
+  { label: "Uptime Target",      value: "99.9%"        },
 ];
 
 // Doubled so CSS loop scrolls seamlessly

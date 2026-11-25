@@ -5,11 +5,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { staggerChildren, fadeInUp, defaultViewport } from "@/lib/animations";
 
 const ITEMS = [
-  "SOC 2 Type II Aligned",
+  "SOC 2 Controls Aligned",
   "256-Bit AES Encryption",
-  "FCRA §615 Compliant",
+  "FCRA §615 Reason Codes",
   "SR 11-7 Model Governance",
-  "Single-Tenant VPC Support",
+  "Single-Tenant Deployment Option",
   "SHAP Explainability",
   "Immutable Audit Trail",
 ];
