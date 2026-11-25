@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useState, useEffect, type FormEvent } from "react";
@@ -32,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/shared/Logo";
-import { Eye, EyeOff, Chrome } from "lucide-react";
+import { Eye, EyeOff, Chrome, KeyRound } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Left brand panel — hidden on < lg
@@ -95,6 +94,8 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -134,7 +135,14 @@ function LoginPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiBase) return;
+    fetch(`${apiBase}/api/v1/sso/status`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setSsoEnabled(Boolean(d?.sso_enabled)))
+      .catch(() => setSsoEnabled(false));
+  }, []);
 
   // Email login
   const handleLogin = async (event: FormEvent) => {
@@ -184,6 +192,35 @@ function LoginPageContent() {
     }
   };
 
+  // ── Enterprise SSO (WorkOS) ───────────────────────────────────────────────
+  const handleSso = async () => {
+    setError(null);
+    if (!email || !email.includes("@")) {
+      setError("Enter your work email above, then click Enterprise SSO.");
+      return;
+    }
+    setSsoLoading(true);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(
+        `${apiBase}/api/v1/sso/authorize?email=${encodeURIComponent(email)}`
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `SSO unavailable (${res.status})`);
+      }
+      const data = await res.json();
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+        return;
+      }
+      throw new Error("No authorization URL returned");
+    } catch (err: any) {
+      setSsoLoading(false);
+      setError(err?.message ?? "Enterprise SSO is not available yet.");
+    }
+  };
+
   return (
     <div className="grid min-h-screen bg-surface-base lg:grid-cols-2">
       <BrandPanel />
@@ -214,6 +251,20 @@ function LoginPageContent() {
             <Chrome className="h-4 w-4" aria-hidden />
             {googleLoading ? "Redirecting…" : "Continue with Google"}
           </Button>
+
+          {/* Enterprise SSO — only shown when the backend has it configured */}
+          {ssoEnabled && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2 border-surface-border bg-surface-raised text-zinc-200 hover:bg-surface-overlay"
+              onClick={handleSso}
+              disabled={ssoLoading || isLoading || googleLoading}
+            >
+              <KeyRound className="h-4 w-4" aria-hidden />
+              {ssoLoading ? "Redirecting to your IdP…" : "Enterprise SSO (SAML / OIDC)"}
+            </Button>
+          )}
 
           {/* Divider */}
           <div className="flex items-center gap-3">

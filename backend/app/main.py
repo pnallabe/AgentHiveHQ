@@ -119,6 +119,7 @@ def create_app() -> FastAPI:
     from app.modules.dns.router import router as dns_router  # noqa: PLC0415
     from app.modules.inquiries.api import router as inquiries_router  # noqa: PLC0415
     from app.modules.tenants.api import router as tenants_router  # noqa: PLC0415
+    from app.modules.sso.api import router as sso_router  # noqa: PLC0415
 
     application.include_router(underwriting_router, prefix="/api/underwriting", tags=["Underwriting"])
     application.include_router(copilot_router, prefix="/api/copilot", tags=["Copilot"])
@@ -132,6 +133,7 @@ def create_app() -> FastAPI:
     application.include_router(dns_router)
     application.include_router(inquiries_router, prefix="/api/v1", tags=["Tenant Inquiries"])
     application.include_router(tenants_router, prefix="/api/v1", tags=["Tenants"])
+    application.include_router(sso_router, prefix="/api/v1", tags=["SSO"])
 
     return application
 
