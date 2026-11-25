@@ -90,6 +90,55 @@ async def create_decision(
         )
 
 
+# ── POST /decision/demo (public, demo-mode only) ─────────────────────────────
+
+@router.post(
+    "/decision/demo",
+    response_model=UnderwritingResponse,
+    status_code=200,
+    summary="Public demo decision (no auth)",
+    description=(
+        "Public sandbox endpoint for the marketing showcase. Forces "
+        "demo_mode=True — only pre-computed demo scenarios are served, never "
+        "live inference. No auth required. Records are persisted with "
+        "demo_mode=True and no tenant."
+    ),
+)
+async def create_demo_decision(
+    request: Request,
+    payload: UnderwritingRequest,
+    db: AsyncSession = Depends(get_db),
+) -> UnderwritingResponse:
+    # Force demo mode regardless of what the caller sent — this endpoint must
+    # never run live inference.
+    payload = payload.model_copy(update={"demo_mode": True})
+    try:
+        return await _service.decide(payload, db, tenant_id=None)
+    except ValidationError as exc:
+        return JSONResponse(
+            status_code=422,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/validation",
+                title="Unprocessable Entity",
+                status=422,
+                detail=str(exc),
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+    except Exception as exc:
+        logger.exception("Unexpected error in /decision/demo", extra={"error": str(exc)})
+        return JSONResponse(
+            status_code=500,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/internal",
+                title="Internal Server Error",
+                status=500,
+                detail="An unexpected error occurred.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+
 # ── GET /history ──────────────────────────────────────────────────────────────
 
 @router.get(

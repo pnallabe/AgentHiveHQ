@@ -45,7 +45,7 @@ export function UseCaseCard({ useCase }: { useCase: UseCase }) {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/underwriting/decision`, {
+      const res = await fetch(`${API_BASE}/api/underwriting/decision/demo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
