@@ -99,6 +99,12 @@ export default function TenantDashboard() {
               href="/lab/integrations"
               icon="🔌"
             />
+            <LinkCard
+              title="Members & Access"
+              description="Manage your team and roles"
+              href="/tenant-portal/members"
+              icon="👥"
+            />
           </div>
         </section>
       </div>
