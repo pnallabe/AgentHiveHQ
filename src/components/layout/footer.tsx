@@ -8,6 +8,7 @@ const FOOTER_NAV = [
       { label: "Products",      href: "/#products"       },
       { label: "How It Works",  href: "/#how-it-works"   },
       { label: "Case Studies",  href: "/case-studies"    },
+      { label: "Showcase",      href: "/showcase"        },
       { label: "Product Lab",   href: "/lab"             },
       { label: "Pricing",       href: "/#pricing"        },
     ],

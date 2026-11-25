@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -27,6 +26,7 @@ const NAV_LINKS = [
   { href: "/engineering",   label: "Engineering"    },
   { href: "/about",         label: "About Us"       },
   { href: "/case-studies",  label: "Case Studies"   },
+  { href: "/showcase",      label: "Showcase"       },
   { href: "/#pricing",      label: "Pricing"        },
   { href: "/tenant-portal", label: "Tenant Portal"  },
 ];
