@@ -10,10 +10,10 @@ export const metadata = {
 };
 
 const STATS = [
-  { label: "Credit Volume Evaluated", value: "$2.4B+" },
-  { label: "Median Decision Latency", value: "340ms" },
-  { label: "Thin-File Approval Lift", value: "+18%" },
-  { label: "Regulatory Audit Findings", value: "0" },
+  { label: "Credit Volume Evaluated (demo)", value: "$2.4B+" },
+  { label: "Median Decision Latency (demo)", value: "340ms" },
+  { label: "Thin-File Approval Lift (target)", value: "+18%" },
+  { label: "Audit Trail Coverage", value: "100%" },
 ];
 
 const LEADERSHIP = [
@@ -26,7 +26,7 @@ const LEADERSHIP = [
   {
     name: "AgentHive Research Team",
     role: "AI & Model Governance",
-    bio: "Pioneering deterministic rule integration with gradient-boosted decision trees and SHAP factor attribution under SR 11-7 standards.",
+    bio: "Building deterministic rule integration with interpretable ML scoring and SHAP factor attribution aligned to SR 11-7 model-risk guidance.",
     badge: "ML & Compliance",
   },
 ];

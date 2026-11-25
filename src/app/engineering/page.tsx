@@ -10,12 +10,12 @@ export const metadata = {
 };
 
 const STACK_ITEMS = [
-  { category: "ML & Execution", tech: "Python 3.11, LightGBM, PyTorch, SHAP Engine" },
-  { category: "API & Backend", tech: "FastAPI, SQLAlchemy, Pydantic v2, AsyncIO" },
-  { category: "Database & Storage", tech: "PostgreSQL, Redis Cache, Row-Level Security" },
-  { category: "Frontend Framework", tech: "Next.js 14 (App Router), TypeScript, TailwindCSS" },
-  { category: "Compliance & Audit", tech: "FCRA §615 Rules Engine, ISO 8601 Audit Log" },
-  { category: "Cloud & Security", tech: "GCP App Hosting, Docker, Single-Tenant VPC Support" },
+  { category: "ML & Execution", tech: "Python 3.11, scikit-learn (LogisticRegression), SHAP" },
+  { category: "API & Backend", tech: "FastAPI, SQLAlchemy (async), Pydantic v2" },
+  { category: "Database & Storage", tech: "Cloud SQL Postgres, tenant-scoped rows, Alembic migrations" },
+  { category: "Frontend Framework", tech: "Next.js 15 (App Router), TypeScript, TailwindCSS" },
+  { category: "Compliance & Audit", tech: "FCRA §615 Reason Codes, ISO 8601 Audit Log" },
+  { category: "Cloud & Security", tech: "GCP Cloud Run, Docker, Firebase Auth, Single-Tenant option" },
 ];
 
 const BENCHMARKS = [
