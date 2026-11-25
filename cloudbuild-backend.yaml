@@ -1,0 +1,72 @@
+# Cloud Build pipeline — AgentHive Backend (FastAPI)
+#
+# Builds the backend Docker image from backend/ and deploys to Cloud Run.
+# No NEXT_PUBLIC_* build-time inlining needed (unlike the frontend) — all
+# runtime config is injected via Cloud Run env vars / secrets at deploy time.
+#
+# Substitution vars (set in the Trigger UI or pass via --substitutions):
+#   _REGION          — Cloud Run region (default us-central1)
+#   _SERVICE_NAME    — Cloud Run service name (default agenthivehq-backend-api)
+#
+# Secrets (referenced at deploy time, NOT build time):
+#   GEMINI_API_KEY   — from Secret Manager GOOGLE_GENAI_API_KEY
+#
+# Database notes:
+#   - Default is ephemeral SQLite (data resets on redeploy) — fine for demos.
+#   - For persistent data, provision Cloud SQL Postgres, store the async URL in
+#     Secret Manager, and switch the deploy step to --set-secrets DATABASE_URL=...
+
+steps:
+  # ── 1. Build Docker image ──────────────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      # Tag with the commit SHA for rollback capability, and also as :latest
+      - -t=us-central1-docker.pkg.dev/$PROJECT_ID/agenthivehq/backend-api:$_COMMIT_SHA
+      - -t=$_IMAGE_TAG
+      - backend/
+
+  # ── 2. Push both tags to Artifact Registry ────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: push-sha
+    args: [push, "us-central1-docker.pkg.dev/$PROJECT_ID/agenthivehq/backend-api:$_COMMIT_SHA"]
+    waitFor: [build]
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
+    args: [push, $_IMAGE_TAG]
+    waitFor: [build]
+
+  # ── 3. Deploy to Cloud Run ─────────────────────────────────────────────────
+  # Deploy the SHA-tagged image so revisions are pinned to exact builds.
+  # Roll back anytime with: gcloud run services update-traffic --to-revisions ...
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE_NAME
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/agenthivehq/backend-api:$_COMMIT_SHA
+      - --region=$_REGION
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8000
+      # ^|^ delimiter: ALLOWED_ORIGINS contains commas, which would otherwise
+      # break --set-env-vars dict parsing. Origins are hardcoded here (they
+      # rarely change); override by editing this file.
+      - --set-env-vars=^|^APP_ENV=production|APP_LOG_LEVEL=INFO|DATABASE_URL=sqlite+aiosqlite:////tmp/agenthive.db|ALLOWED_ORIGINS=https://agenthivehq.com,https://www.agenthivehq.com,https://agenthivehq-landing.firebaseapp.com,https://agenthivehq-landing.web.app
+      - --set-secrets=GEMINI_API_KEY=GOOGLE_GENAI_API_KEY:latest
+    waitFor: [push-sha, push-latest]
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: agenthivehq-backend-api
+  _IMAGE_TAG: us-central1-docker.pkg.dev/agenthivehq-landing/agenthivehq/backend-api:latest
+  # Populated by scripts/deploy-backend.sh from `git rev-parse --short HEAD`.
+  _COMMIT_SHA: manual
+
+options:
+  substitution_option: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
