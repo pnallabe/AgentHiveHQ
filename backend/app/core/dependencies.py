@@ -14,10 +14,13 @@ import asyncio
 import logging
 import os
 
+from dataclasses import dataclass
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -126,3 +129,157 @@ def require_executive_role(
             ),
         )
     return claims
+
+
+# ---------------------------------------------------------------------------
+# Tenant resolution
+#
+# Tenant identity comes from Firebase custom claims (set by the Admin SDK at
+# provisioning time) and is verified against the tenant_memberships table.
+# The frontend NEVER supplies the tenant — client-side tenant selectors are
+# display-only.
+# ---------------------------------------------------------------------------
+
+#: Roles in descending privilege order. ``auditor`` is read-only.
+TENANT_ROLES = ("admin", "risk_manager", "underwriter", "auditor")
+
+
+@dataclass(frozen=True)
+class TenantContext:
+    """Resolved, verified tenant identity for the current request."""
+
+    tenant_id: str
+    slug: str
+    user_uid: str
+    email: Optional[str]
+    role: str
+
+
+def _slug_from_claims(claims: dict) -> Optional[str]:
+    """Extract a tenant slug from Firebase custom claims.
+
+    Accepts the same claim shapes the frontend routing layer understands:
+    ``tenant_slug`` / ``tenantSlug`` / ``tenant_id`` / ``tenantId`` or the
+    first entry of a ``tenants`` membership array.
+    """
+    if not claims:
+        return None
+    for key in ("tenant_slug", "tenantSlug", "tenant_id", "tenantId"):
+        value = claims.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    tenants = claims.get("tenants")
+    if isinstance(tenants, list) and tenants:
+        first = tenants[0]
+        if isinstance(first, str) and first.strip():
+            return first.strip().lower()
+        if isinstance(first, dict):
+            for key in ("slug", "tenantSlug", "tenant_slug", "tenant_id", "tenantId", "id"):
+                value = first.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip().lower()
+    return None
+
+
+async def _resolve_tenant(claims: dict, db) -> Optional[TenantContext]:
+    """Look up the tenant + membership for the claims' slug. None if unlinked."""
+    from sqlalchemy import select
+
+    from app.shared.db_models import Tenant, TenantMembership
+
+    slug = _slug_from_claims(claims)
+    if not slug:
+        return None
+
+    tenant_result = await db.execute(
+        select(Tenant).where(Tenant.slug == slug, Tenant.status == "active")
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if tenant is None:
+        return None
+
+    uid = str(claims.get("uid", ""))
+    membership_result = await db.execute(
+        select(TenantMembership).where(
+            TenantMembership.tenant_id == tenant.id,
+            TenantMembership.user_uid == uid,
+        )
+    )
+    membership = membership_result.scalar_one_or_none()
+    if membership is None:
+        return None
+
+    return TenantContext(
+        tenant_id=tenant.id,
+        slug=tenant.slug,
+        user_uid=uid,
+        email=claims.get("email") or membership.email,
+        role=membership.role,
+    )
+
+
+async def optional_tenant(
+    claims: dict = Depends(require_firebase_user),
+    db=Depends(get_db),
+) -> Optional[TenantContext]:
+    """Resolve the tenant if the user is linked to one; otherwise None.
+
+    Never raises — used on endpoints (e.g. underwriting) that must keep
+    serving unauthenticated-sandbox / pre-tenant traffic during migration.
+    """
+    if _SKIP_AUTH:
+        return None
+    try:
+        return await _resolve_tenant(claims, db)
+    except Exception as exc:  # noqa: BLE001 — resolution failure must not 500 the request
+        logger.warning("optional_tenant resolution failed: %s", exc)
+        return None
+
+
+async def require_tenant(
+    claims: dict = Depends(require_firebase_user),
+    db=Depends(get_db),
+) -> TenantContext:
+    """Require a verified tenant membership. 403 when unlinked."""
+    if _SKIP_AUTH:
+        return TenantContext(
+            tenant_id="dev-tenant",
+            slug="dev-tenant",
+            user_uid="dev-user",
+            email="dev@localhost",
+            role="admin",
+        )
+    ctx = await _resolve_tenant(claims, db)
+    if ctx is None:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Your account is not linked to an active tenant. "
+                "Contact your administrator or support to request access."
+            ),
+        )
+    return ctx
+
+
+def require_tenant_role(*allowed: str):
+    """Build a dependency requiring one of the given tenant roles.
+
+    Usage::
+
+        @router.get("/admin-only")
+        async def endpoint(ctx: TenantContext = Depends(require_tenant_role("admin"))):
+            ...
+    """
+    invalid = set(allowed) - set(TENANT_ROLES)
+    if invalid:
+        raise ValueError(f"Unknown tenant role(s): {sorted(invalid)}")
+
+    async def _checker(ctx: TenantContext = Depends(require_tenant)) -> TenantContext:
+        if ctx.role not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"This action requires one of: {', '.join(allowed)}.",
+            )
+        return ctx
+
+    return _checker

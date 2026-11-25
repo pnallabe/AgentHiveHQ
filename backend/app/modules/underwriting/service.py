@@ -197,6 +197,7 @@ class UnderwritingService:
         self,
         request: UnderwritingRequest,
         db: AsyncSession,
+        tenant_id: Optional[str] = None,
     ) -> UnderwritingResponse:
         """Run the underwriting pipeline and persist the result.
 
@@ -213,7 +214,7 @@ class UnderwritingService:
         model_version = _model.MODEL_VERSION
 
         if request.demo_mode:
-            return await self._serve_demo(request, db, decision_id, t_start)
+            return await self._serve_demo(request, db, decision_id, t_start, tenant_id=tenant_id)
 
         # ── Live pipeline ─────────────────────────────────────────────────────
         raw = request.model_dump()
@@ -279,6 +280,7 @@ class UnderwritingService:
             rules_triggered=rules_triggered,
             demo_mode=False,
             event_metadata={"elapsed_ms": round(elapsed_ms, 2)},
+            tenant_id=tenant_id,
         )
 
         # ── Freddie Mac portfolio benchmark (non-blocking) ───────────────────
@@ -316,6 +318,7 @@ class UnderwritingService:
         db: AsyncSession,
         decision_id: str,
         t_start: float,
+        tenant_id: Optional[str] = None,
     ) -> UnderwritingResponse:
         tag = request.scenario_tag or _DEMO_FALLBACK_KEY
         template = DEMO_RESPONSES.get(tag, DEMO_RESPONSES[_DEMO_FALLBACK_KEY])
@@ -343,6 +346,7 @@ class UnderwritingService:
             rules_triggered=[],
             demo_mode=True,
             event_metadata={"scenario_tag": tag, "elapsed_ms": round(elapsed_ms, 2)},
+            tenant_id=tenant_id,
         )
 
         return UnderwritingResponse(
@@ -381,6 +385,7 @@ class UnderwritingService:
         rules_triggered: List[str],
         demo_mode: bool,
         event_metadata: dict,
+        tenant_id: Optional[str] = None,
     ) -> None:
         record = DecisionRecord(
             id=decision_id,
@@ -395,6 +400,7 @@ class UnderwritingService:
             model_version=model_version,
             rules_triggered=rules_triggered,
             demo_mode=demo_mode,
+            tenant_id=tenant_id,
         )
         db.add(record)
         await db.flush()  # Obtain PK before audit log write.
@@ -404,6 +410,7 @@ class UnderwritingService:
             event_type="decision_made",
             actor="system",
             metadata_=event_metadata,
+            tenant_id=tenant_id,
         )
         db.add(audit)
         # Session.commit() is called by the `get_db` dependency on success.

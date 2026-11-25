@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import require_firebase_user
+from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.underwriting.schemas import (
@@ -59,9 +59,12 @@ async def create_decision(
     payload: UnderwritingRequest,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
 ) -> UnderwritingResponse:
     try:
-        return await _service.decide(payload, db)
+        return await _service.decide(
+            payload, db, tenant_id=tenant.tenant_id if tenant else None
+        )
     except ValidationError as exc:
         return JSONResponse(
             status_code=422,
@@ -101,8 +104,17 @@ async def get_history(
     demo_mode: Optional[bool] = Query(default=None, description="Filter by demo mode flag"),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
 ) -> PaginatedDecisions:
     stmt = select(DecisionRecord).order_by(DecisionRecord.created_at.desc())
+
+    # ── Tenant scoping ──────────────────────────────────────────────────────
+    # Tenant-linked users see only their tenant's records; unlinked/sandbox
+    # users see only untenanted (sandbox) records. Never mix the two.
+    if tenant is not None:
+        stmt = stmt.where(DecisionRecord.tenant_id == tenant.tenant_id)
+    else:
+        stmt = stmt.where(DecisionRecord.tenant_id.is_(None))
 
     if decision:
         stmt = stmt.where(DecisionRecord.decision == decision)

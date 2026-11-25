@@ -128,6 +128,15 @@ class DecisionRecord(Base):
         comment="True when the decision was produced by a demo mock, not live inference",
     )
 
+    # ── Tenancy ────────────────────────────────────────────────────────────
+    tenant_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("tenants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Owning tenant; NULL for legacy rows and unauthenticated sandbox decisions",
+    )
+
     # ── Relationships ──────────────────────────────────────────────────────
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         "AuditLog",
@@ -137,6 +146,138 @@ class DecisionRecord(Base):
 
     def __repr__(self) -> str:
         return f"<DecisionRecord id={self.id} decision={self.decision}>"
+
+
+class Tenant(Base):
+    """A customer organisation (lender, CDFI, fintech) using the platform."""
+
+    __tablename__ = "tenants"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=_new_uuid,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+    )
+    slug: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="URL-safe tenant identifier used in /t/{slug}/... routes and Firebase custom claims",
+    )
+    display_name: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+    )
+    plan: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="pilot",
+        comment="pilot | starter | growth | enterprise",
+    )
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="active",
+        index=True,
+        comment="active | suspended | churned",
+    )
+
+    memberships: Mapped[List["TenantMembership"]] = relationship(
+        "TenantMembership",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Tenant slug={self.slug} status={self.status}>"
+
+
+class TenantMembership(Base):
+    """Maps a Firebase user (uid) to a tenant with a role."""
+
+    __tablename__ = "tenant_memberships"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=_new_uuid,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_uid: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        index=True,
+        comment="Firebase Auth UID",
+    )
+    email: Mapped[Optional[str]] = mapped_column(
+        String(256),
+        nullable=True,
+    )
+    role: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="underwriter",
+        comment="admin | risk_manager | underwriter | auditor",
+    )
+
+    tenant: Mapped["Tenant"] = relationship(
+        "Tenant",
+        back_populates="memberships",
+    )
+
+    def __repr__(self) -> str:
+        return f"<TenantMembership tenant={self.tenant_id} uid={self.user_uid} role={self.role}>"
+
+
+class TenantInquiry(Base):
+    """Inbound 'request a tenant' submission from the public signup form."""
+
+    __tablename__ = "tenant_inquiries"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=_new_uuid,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    email: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
+    company: Mapped[str] = mapped_column(String(256), nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    use_case: Mapped[str] = mapped_column(Text, nullable=False)
+    volume: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    referral: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="new",
+        index=True,
+        comment="new | contacted | provisioned | declined",
+    )
+
+    def __repr__(self) -> str:
+        return f"<TenantInquiry id={self.id} company={self.company} status={self.status}>"
 
 
 class AuditLog(Base):
@@ -168,6 +309,15 @@ class AuditLog(Base):
         nullable=False,
         index=True,
         comment="Foreign key to decisions.id",
+    )
+
+    # ── Tenancy ────────────────────────────────────────────────────────────
+    tenant_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("tenants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Owning tenant; denormalised from the parent decision for tenant-scoped audit queries",
     )
 
     # ── Event descriptor ───────────────────────────────────────────────────

@@ -46,12 +46,25 @@ class GovernanceDashboardService:
 
     # ── Dashboard ─────────────────────────────────────────────────────────────
 
-    async def get(self, db: AsyncSession, period: str = "last_30_days") -> dict[str, Any]:
-        """Return aggregated governance metrics for the given period."""
+    async def get(
+        self,
+        db: AsyncSession,
+        period: str = "last_30_days",
+        tenant_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Return aggregated governance metrics for the given period.
+
+        ``tenant_id`` scopes every query to that tenant; ``None`` scopes to
+        untenanted (sandbox) records only — the two populations never mix.
+        """
         cutoff = _period_cutoff(period)
 
-        # Base filter: exclude demo records; apply period window.
+        # Base filter: exclude demo records; apply period window; scope tenant.
         base = select(DecisionRecord).where(DecisionRecord.demo_mode == False)  # noqa: E712
+        if tenant_id is not None:
+            base = base.where(DecisionRecord.tenant_id == tenant_id)
+        else:
+            base = base.where(DecisionRecord.tenant_id.is_(None))
         if cutoff:
             base = base.where(DecisionRecord.created_at >= cutoff)
 
@@ -92,6 +105,7 @@ class GovernanceDashboardService:
             select(DecisionRecord.risk_segment, func.count().label("cnt"))
             .where(DecisionRecord.demo_mode == False)  # noqa: E712
         )
+        segment_stmt = self._scope_tenant(segment_stmt, tenant_id)
         if cutoff:
             segment_stmt = segment_stmt.where(DecisionRecord.created_at >= cutoff)
         segment_stmt = segment_stmt.group_by(DecisionRecord.risk_segment)
@@ -109,6 +123,7 @@ class GovernanceDashboardService:
             )
             .where(DecisionRecord.demo_mode == False)  # noqa: E712
         )
+        seg_approve_stmt = self._scope_tenant(seg_approve_stmt, tenant_id)
         if cutoff:
             seg_approve_stmt = seg_approve_stmt.where(DecisionRecord.created_at >= cutoff)
         seg_approve_stmt = seg_approve_stmt.group_by(DecisionRecord.risk_segment)
@@ -135,6 +150,7 @@ class GovernanceDashboardService:
             select(DecisionRecord.reason_codes, DecisionRecord.rules_triggered)
             .where(DecisionRecord.demo_mode == False)  # noqa: E712
         )
+        full_stmt = self._scope_tenant(full_stmt, tenant_id)
         if cutoff:
             full_stmt = full_stmt.where(DecisionRecord.created_at >= cutoff)
         full_rows = (await db.execute(full_stmt)).all()
@@ -166,6 +182,7 @@ class GovernanceDashboardService:
             )
             .where(DecisionRecord.demo_mode == False)  # noqa: E712
         )
+        day_stmt = self._scope_tenant(day_stmt, tenant_id)
         if cutoff:
             day_stmt = day_stmt.where(DecisionRecord.created_at >= cutoff)
         day_stmt = day_stmt.group_by(text("day")).order_by(text("day"))
@@ -211,7 +228,22 @@ class GovernanceDashboardService:
 
     # ── Bias report ───────────────────────────────────────────────────────────
 
-    async def bias_report(self, db: AsyncSession) -> dict[str, Any]:
+    @staticmethod
+    def _scope_tenant(stmt, tenant_id: Optional[str]):
+        """Apply tenant scoping to a DecisionRecord query.
+
+        ``tenant_id`` set → only that tenant's rows; ``None`` → only untenanted
+        (sandbox) rows. The two populations never mix.
+        """
+        if tenant_id is not None:
+            return stmt.where(DecisionRecord.tenant_id == tenant_id)
+        return stmt.where(DecisionRecord.tenant_id.is_(None))
+
+    async def bias_report(
+        self,
+        db: AsyncSession,
+        tenant_id: Optional[str] = None,
+    ) -> dict[str, Any]:
         """Compute adverse impact ratio across income bands (four-fifths rule).
 
         Income bands:
@@ -226,6 +258,7 @@ class GovernanceDashboardService:
             select(DecisionRecord.input_payload, DecisionRecord.decision)
             .where(DecisionRecord.demo_mode == False)  # noqa: E712
         )
+        stmt = self._scope_tenant(stmt, tenant_id)
         rows = (await db.execute(stmt)).all()
 
         bands: dict[str, dict[str, int]] = {
@@ -297,3 +330,14 @@ class GovernanceDashboardService:
             "portfolio_benchmarks":      None,
             "trend":                     [],
         }
+
+    @staticmethod
+    def _scope_tenant(stmt, tenant_id: Optional[str]):
+        """Scope a query statement to the given tenant ID.
+
+        If ``tenant_id`` is None, scopes to untenanted (sandbox) records only.
+        """
+        if tenant_id is not None:
+            return stmt.where(DecisionRecord.tenant_id == tenant_id)
+        else:
+            return stmt.where(DecisionRecord.tenant_id.is_(None))

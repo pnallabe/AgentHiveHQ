@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     origins = settings.allowed_origins_list
+    logger.info("CORS allowed origins", extra={"allowed_origins": origins})
     if "*" in origins:
         application.add_middleware(
             CORSMiddleware,
@@ -116,6 +117,7 @@ def create_app() -> FastAPI:
     from app.modules.analytics.compliance_proxy_api import router as compliance_router  # noqa: PLC0415
     from app.modules.analytics.api import router as analytics_router  # noqa: PLC0415
     from app.modules.dns.router import router as dns_router  # noqa: PLC0415
+    from app.modules.inquiries.api import router as inquiries_router  # noqa: PLC0415
 
     application.include_router(underwriting_router, prefix="/api/underwriting", tags=["Underwriting"])
     application.include_router(copilot_router, prefix="/api/copilot", tags=["Copilot"])
@@ -127,6 +129,7 @@ def create_app() -> FastAPI:
     application.include_router(compliance_router, tags=["Analytics — Compliance"])
     application.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics — Core"])
     application.include_router(dns_router)
+    application.include_router(inquiries_router, prefix="/api/v1", tags=["Tenant Inquiries"])
 
     return application
 

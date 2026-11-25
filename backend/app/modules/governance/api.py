@@ -14,7 +14,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.core.dependencies import require_firebase_user
+from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.governance.service import GovernanceDashboardService
@@ -44,6 +44,7 @@ async def governance_dashboard(
     ),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
 ) -> dict[str, Any]:
     if period not in _VALID_PERIODS:
         return JSONResponse(
@@ -58,7 +59,11 @@ async def governance_dashboard(
         )
 
     try:
-        return await _service.get(db=db, period=period)
+        return await _service.get(
+            db=db,
+            period=period,
+            tenant_id=tenant.tenant_id if tenant else None,
+        )
     except Exception as exc:
         logger.exception("Error in /governance/dashboard", extra={"error": str(exc)})
         return JSONResponse(
@@ -86,9 +91,12 @@ async def bias_report(
     request: Request,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
 ) -> dict[str, Any]:
     try:
-        return await _service.bias_report(db=db)
+        return await _service.bias_report(
+            db=db, tenant_id=tenant.tenant_id if tenant else None
+        )
     except Exception as exc:
         logger.exception("Error in /governance/bias-report", extra={"error": str(exc)})
         return JSONResponse(
