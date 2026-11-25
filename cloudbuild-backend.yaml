@@ -53,11 +53,14 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --port=8000
+      # Mount the Cloud SQL unix socket so the asyncpg host=/cloudsql/... URL works.
+      - --add-cloudsql-instances=agenthivehq-landing:us-central1:agenthivehq-db
       # ^|^ delimiter: ALLOWED_ORIGINS contains commas, which would otherwise
       # break --set-env-vars dict parsing. Origins are hardcoded here (they
       # rarely change); override by editing this file.
-      - --set-env-vars=^|^APP_ENV=production|APP_LOG_LEVEL=INFO|DATABASE_URL=sqlite+aiosqlite:////tmp/agenthive.db|ALLOWED_ORIGINS=https://agenthivehq.com,https://www.agenthivehq.com,https://agenthivehq-landing.firebaseapp.com,https://agenthivehq-landing.web.app
-      - --set-secrets=GEMINI_API_KEY=GOOGLE_GENAI_API_KEY:latest
+      - --set-env-vars=^|^APP_ENV=production|APP_LOG_LEVEL=INFO|ALLOWED_ORIGINS=https://agenthivehq.com,https://www.agenthivehq.com,https://agenthivehq-landing.firebaseapp.com,https://agenthivehq-landing.web.app
+      # DATABASE_URL comes from Secret Manager (persistent Cloud SQL Postgres).
+      - --set-secrets=GEMINI_API_KEY=GOOGLE_GENAI_API_KEY:latest,DATABASE_URL=agenthive-database-url:latest
     waitFor: [push-sha, push-latest]
 
 substitutions:

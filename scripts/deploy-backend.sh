@@ -32,9 +32,10 @@ GCP_PROJECT="${GCP_PROJECT:-agenthivehq-landing}"
 REGION="${REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-agenthivehq-backend-api}"
 
-# NOTE: DATABASE_URL and ALLOWED_ORIGINS are set in cloudbuild-backend.yaml
-# (they contain commas, which break gcloud --substitutions parsing). Edit the
-# YAML to change them. Default is ephemeral SQLite — data resets on redeploy.
+# NOTE: DATABASE_URL (Cloud SQL Postgres via Secret Manager) and ALLOWED_ORIGINS
+# are set in cloudbuild-backend.yaml — they contain commas, which break gcloud
+# --substitutions parsing. Edit the YAML to change them. The backend connects to
+# the agenthivehq-db Cloud SQL instance over the mounted unix socket.
 
 # ── Resolve git commit SHA for image tagging ──────────────────────────────────
 COMMIT_SHA=$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo "manual")
