@@ -22,7 +22,12 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
+from app.core.dependencies import (
+    TenantContext,
+    optional_tenant,
+    require_firebase_user,
+    require_tenant_or_api_key,
+)
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.underwriting.batch import run_batch
@@ -112,8 +117,7 @@ async def create_batch_decision(
     request: Request,
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_firebase_user),
-    tenant: Optional[TenantContext] = Depends(optional_tenant),
+    tenant: TenantContext = Depends(require_tenant_or_api_key),
 ) -> BatchDecisionResponse | JSONResponse:
     if not file.filename or not file.filename.lower().endswith(".csv"):
         return JSONResponse(
@@ -131,7 +135,7 @@ async def create_batch_decision(
         result = await run_batch(
             csv_bytes,
             db,
-            tenant_id=tenant.tenant_id if tenant else None,
+            tenant_id=tenant.tenant_id,
         )
         return BatchDecisionResponse(
             total_rows=result.total_rows,
