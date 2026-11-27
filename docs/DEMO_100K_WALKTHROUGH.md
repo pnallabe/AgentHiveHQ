@@ -34,6 +34,24 @@ cd backend
 Have the file ready to drag-and-drop. Have the governance dashboard open in
 another tab.
 
+### Production demo credentials
+
+The **Meridian Financial** demo tenant is provisioned in production:
+
+- **Tenant slug:** `meridian-financial`
+- **API key:** stored in Secret Manager as `agenthive-demo-api-key`
+  (retrieve with `gcloud secrets versions access latest --secret=agenthive-demo-api-key --project=agenthivehq-landing`)
+
+Set these before the demo:
+
+```bash
+export BASE="https://agenthivehq-backend-api-311931689095.us-central1.run.app"
+export DEMO_KEY="$(gcloud secrets versions access latest --secret=agenthive-demo-api-key --project=agenthivehq-landing)"
+```
+
+The batch endpoint authenticates with the `X-AgentHive-Key` header (no Firebase
+login needed) — this is exactly how a customer's LOS would call it.
+
 ---
 
 ## The script
@@ -51,7 +69,7 @@ Upload the CSV to the batch endpoint:
 
 ```bash
 curl -X POST "$BASE/api/underwriting/decision/batch" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "X-AgentHive-Key: $DEMO_KEY" \
   -F "file=@data/demo_client_100k.csv"
 ```
 
@@ -87,7 +105,7 @@ Open `/lab/governance`. Point at:
 ### Step 4 — Generate the exam package, live (60s, the close)
 ```bash
 curl -X GET "$BASE/api/governance/exam-package" \
-  -H "Authorization: Bearer $TOKEN"
+  -H "X-AgentHive-Key: $DEMO_KEY"
 ```
 
 > "This is the document their examiner gets. Model inventory, validation

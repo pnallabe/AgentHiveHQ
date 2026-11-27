@@ -14,7 +14,12 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
+from app.core.dependencies import (
+    TenantContext,
+    optional_tenant,
+    require_firebase_user,
+    require_tenant_or_api_key,
+)
 from app.core.logging import get_logger
 from app.database import get_db
 from app.modules.governance.exam_package import build_exam_package
@@ -131,13 +136,12 @@ async def exam_package(
     request: Request,
     limit: int = Query(default=500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_firebase_user),
-    tenant: Optional[TenantContext] = Depends(optional_tenant),
+    tenant: TenantContext = Depends(require_tenant_or_api_key),
 ) -> dict[str, Any] | JSONResponse:
     try:
-        tenant_id = tenant.tenant_id if tenant else None
-        tenant_slug = tenant.slug if tenant else "sandbox"
-        exported_by = (tenant.email or tenant.user_uid) if tenant else "anonymous"
+        tenant_id = tenant.tenant_id
+        tenant_slug = tenant.slug
+        exported_by = tenant.email or tenant.user_uid
 
         # Pull the tenant-scoped audit trail (same query as /tenants/me/audit-export).
         stmt = (
