@@ -58,9 +58,9 @@ steps:
       # ^|^ delimiter: ALLOWED_ORIGINS contains commas, which would otherwise
       # break --set-env-vars dict parsing. Origins are hardcoded here (they
       # rarely change); override by editing this file.
-      - --set-env-vars=^|^APP_ENV=production|APP_LOG_LEVEL=INFO|ALLOWED_ORIGINS=https://agenthivehq.com,https://www.agenthivehq.com,https://agenthivehq-landing.firebaseapp.com,https://agenthivehq-landing.web.app
+      - --set-env-vars=^|^APP_ENV=production|APP_LOG_LEVEL=INFO|ALLOWED_ORIGINS=https://agenthivehq.com,https://www.agenthivehq.com,https://agenthivehq-landing.firebaseapp.com,https://agenthivehq-landing.web.app|SMTP_HOST=smtp.gmail.com|SMTP_PORT=587|SMTP_USERNAME=pradeep.nallabelli@gmail.com|INQUIRY_NOTIFY_TO=pradeep.nallabelli@gmail.com|OUTREACH_SEND_ENABLED=false|OUTREACH_FROM_NAME=Pradeep Nallabelli|OUTREACH_DAILY_LIMIT=20|OUTREACH_PUBLIC_BASE_URL=https://agenthivehq-backend-api-311931689095.us-central1.run.app|OUTREACH_BOOKING_URL=https://agenthivehq.com/signup
       # DATABASE_URL comes from Secret Manager (persistent Cloud SQL Postgres).
-      - --set-secrets=GEMINI_API_KEY=GOOGLE_GENAI_API_KEY:latest,DATABASE_URL=agenthive-database-url:latest
+      - --set-secrets=GEMINI_API_KEY=GOOGLE_GENAI_API_KEY:latest,DATABASE_URL=agenthive-database-url:latest,SMTP_PASSWORD=agenthive-smtp-password:latest,SECRET_KEY=agenthive-secret-key:latest,OUTREACH_ADMIN_KEY=agenthive-outreach-admin-key:latest
     waitFor: [push-sha, push-latest]
 
 substitutions:

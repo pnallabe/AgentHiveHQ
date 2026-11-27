@@ -17,9 +17,13 @@ from fastapi.responses import JSONResponse
 from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
+from app.modules.governance.exam_package import build_exam_package
 from app.modules.governance.service import GovernanceDashboardService
 from app.modules.underwriting.schemas import ProblemDetail
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.shared.db_models import AuditLog, DecisionRecord
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -106,6 +110,78 @@ async def bias_report(
                 title="Bias Report Error",
                 status=500,
                 detail="Failed to generate bias report.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+# ── GET /governance/exam-package ─────────────────────────────────────────────
+
+@router.get(
+    "/exam-package",
+    response_model=None,
+    summary="One-click SR 11-7 exam package (Model Validation Report)",
+    description=(
+        "Generates a self-contained Model Validation Report from live system data: "
+        "model inventory, validation evidence (performance + fair-lending), and the "
+        "immutable audit trail. Tenant-scoped by construction. This is the artifact "
+        "an SR 11-7 validator or OCC/CFPB examiner receives."
+    ),
+)
+async def exam_package(
+    request: Request,
+    limit: int = Query(default=500, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
+) -> dict[str, Any] | JSONResponse:
+    try:
+        tenant_id = tenant.tenant_id if tenant else None
+        tenant_slug = tenant.slug if tenant else "sandbox"
+        exported_by = (tenant.email or tenant.user_uid) if tenant else "anonymous"
+
+        # Pull the tenant-scoped audit trail (same query as /tenants/me/audit-export).
+        stmt = (
+            select(AuditLog, DecisionRecord)
+            .join(DecisionRecord, AuditLog.decision_id == DecisionRecord.id)
+            .order_by(AuditLog.created_at.desc())
+            .limit(limit)
+        )
+        if tenant_id is not None:
+            stmt = stmt.where(AuditLog.tenant_id == tenant_id)
+        else:
+            stmt = stmt.where(AuditLog.tenant_id.is_(None))
+        rows = (await db.execute(stmt)).all()
+
+        audit_records = [
+            {
+                "audit_id": log.id,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+                "event_type": log.event_type,
+                "actor": log.actor,
+                "decision_id": log.decision_id,
+                "decision": rec.decision if rec else None,
+                "model_version": rec.model_version if rec else None,
+                "metadata": log.metadata_ or {},
+            }
+            for log, rec in rows
+        ]
+
+        return await build_exam_package(
+            db,
+            tenant_id=tenant_id,
+            tenant_slug=tenant_slug,
+            exported_by=exported_by,
+            audit_records=audit_records,
+        )
+    except Exception as exc:
+        logger.exception("Error in /governance/exam-package", extra={"error": str(exc)})
+        return JSONResponse(
+            status_code=500,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/internal",
+                title="Exam Package Error",
+                status=500,
+                detail="Failed to generate exam package.",
                 instance=str(request.url.path),
             ).model_dump(),
         )

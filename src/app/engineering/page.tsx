@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Cpu, Server, ShieldCheck, Zap, Code2, GitBranch, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export const metadata = {
-  title: "Engineering Architecture & Tech Stack | Helix Decisions by AgentHive",
-  description: "Technical overview of Helix Decisions system architecture, ML inference engine, SHAP explainability pipeline, and low-latency API infrastructure.",
+  title: "Engineering Architecture & Tech Stack | AgentHive",
+  description: "Technical overview of the AgentHive system architecture, ML inference engine, SHAP explainability pipeline, and low-latency API infrastructure.",
 };
 
 const STACK_ITEMS = [

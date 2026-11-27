@@ -70,6 +70,53 @@ class Settings(BaseSettings):
         description="Path to a GCP service-account JSON key file.  Leave blank to use ADC / Cloud Run identity.",
     )
 
+    # ── Inquiry notifications (SMTP) ─────────────────────────────────────────
+    # For Gmail: enable 2FA, then create an App Password at
+    # https://myaccount.google.com/apppasswords and use it as SMTP_PASSWORD.
+    SMTP_HOST: str = Field(default="", description="SMTP server host, e.g. smtp.gmail.com. Blank disables inquiry notifications.")
+    SMTP_PORT: int = Field(default=587, description="587 for STARTTLS, 465 for SSL")
+    SMTP_USERNAME: str = Field(default="", description="Sending mailbox / SMTP login")
+    SMTP_PASSWORD: str = Field(default="", description="SMTP password or app password")
+    INQUIRY_NOTIFY_TO: str = Field(default="", description="Comma-separated recipients for new inquiry alerts; defaults to SMTP_USERNAME")
+
+    # ── Outreach engine (governance-first prospecting) ───────────────────────
+    # Master kill switch. When false the sequencer logs what it WOULD send and
+    # persists messages as status="queued" without touching SMTP.
+    OUTREACH_SEND_ENABLED: bool = Field(
+        default=False,
+        description="Master switch for live outreach sending. Default false = dry-run.",
+    )
+    OUTREACH_FROM_NAME: str = Field(
+        default="Pradeep Nallabelli",
+        description="Display name on outbound outreach mail",
+    )
+    OUTREACH_FROM_EMAIL: str = Field(
+        default="",
+        description="From address for outreach; defaults to SMTP_USERNAME when blank",
+    )
+    OUTREACH_DAILY_LIMIT: int = Field(
+        default=20, ge=1, le=500,
+        description="Max outreach emails per sequencer run-day (domain warmup cap)",
+    )
+    OUTREACH_ADMIN_KEY: str = Field(
+        default="",
+        description="Shared secret for /api/v1/outreach/admin/* endpoints (X-Outreach-Admin-Key header)",
+    )
+    OUTREACH_PUBLIC_BASE_URL: str = Field(
+        default="https://agenthivehq-backend-api-311931689095.us-central1.run.app",
+        description="Public base URL used in tracking pixels / unsubscribe links",
+    )
+    OUTREACH_BOOKING_URL: str = Field(
+        default="https://agenthivehq.com/signup",
+        description="CTA link used in outreach copy (book-a-demo / sample audit package)",
+    )
+
+    # ── Security ─────────────────────────────────────────────────────────────
+    SECRET_KEY: str = Field(
+        default="dev-only-insecure-secret",
+        description="Random secret for signing tokens (e.g. outreach unsubscribe links). Generate: python -c \"import secrets; print(secrets.token_hex(32))\"",
+    )
+
     @field_validator("APP_ENV")
     @classmethod
     def validate_env(cls, v: str) -> str:

@@ -9,7 +9,7 @@ export function AboutSection() {
             Who We Are
           </h2>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-            Helix Decisions is a frontier AI company building compliant, explainable credit intelligence for modern lenders.
+            AgentHive is a frontier AI company building compliant, explainable credit intelligence for modern lenders.
           </p>
         </AnimatedSection>
       </div>

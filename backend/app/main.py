@@ -46,16 +46,30 @@ def create_app() -> FastAPI:
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     origins = settings.allowed_origins_list
-    logger.info("CORS allowed origins", extra={"allowed_origins": origins})
     if "*" in origins:
-        application.add_middleware(
-            CORSMiddleware,
-            allow_origin_regex=r"https?://.*",
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-    else:
+        explicit = [o for o in origins if o != "*"]
+        if explicit:
+            logger.warning(
+                "CORS wildcard '*' cannot be combined with allow_credentials=True — "
+                "ignoring wildcard and using explicit origins only",
+                extra={"allowed_origins": explicit},
+            )
+            origins = explicit
+        else:
+            logger.warning(
+                "CORS configured as wildcard '*' only — credentials DISABLED. "
+                "Set ALLOWED_ORIGINS to explicit domains for credentialed auth flows."
+            )
+            application.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=False,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            origins = []
+    if origins:
+        logger.info("CORS allowed origins", extra={"allowed_origins": origins})
         application.add_middleware(
             CORSMiddleware,
             allow_origins=origins,
@@ -120,6 +134,7 @@ def create_app() -> FastAPI:
     from app.modules.inquiries.api import router as inquiries_router  # noqa: PLC0415
     from app.modules.tenants.api import router as tenants_router  # noqa: PLC0415
     from app.modules.sso.api import router as sso_router  # noqa: PLC0415
+    from app.modules.outreach.api import router as outreach_router  # noqa: PLC0415
 
     application.include_router(underwriting_router, prefix="/api/underwriting", tags=["Underwriting"])
     application.include_router(copilot_router, prefix="/api/copilot", tags=["Copilot"])
@@ -134,6 +149,7 @@ def create_app() -> FastAPI:
     application.include_router(inquiries_router, prefix="/api/v1", tags=["Tenant Inquiries"])
     application.include_router(tenants_router, prefix="/api/v1", tags=["Tenants"])
     application.include_router(sso_router, prefix="/api/v1", tags=["SSO"])
+    application.include_router(outreach_router, prefix="/api/v1/outreach", tags=["Outreach"])
 
     return application
 

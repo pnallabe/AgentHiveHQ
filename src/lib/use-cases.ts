@@ -37,6 +37,28 @@ export interface UseCase {
 
 export const USE_CASES: UseCase[] = [
   {
+    slug: "governance-exam",
+    persona: "Model Governance & Compliance",
+    headline: "Pass SR 11-7 model-risk exams with a live audit trail",
+    pain:
+      "Model documentation and ongoing monitoring take weeks of staff time and still draw examiner findings.",
+    approach:
+      "Every decision is persisted with SHAP values, reason codes, and an immutable audit log — exportable as an examiner-ready pack in one click.",
+    demoShows: [
+      "Governance dashboard with approval-rate by segment",
+      "Four-fifths / adverse-impact monitoring",
+      "One-click tenant-scoped audit export",
+    ],
+    scenarioId: "high_risk",
+    expectedDecision: "reject",
+    metrics: [
+      { label: "Exam prep time (illustrative)", value: "−96%" },
+      { label: "Audit coverage", value: "100%" },
+    ],
+    accent: "text-emerald-300",
+    badge: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40",
+  },
+  {
     slug: "thin-file-inclusion",
     persona: "Thin-File Applicant",
     headline: "Approve credit-invisible borrowers without relaxing risk",
@@ -101,28 +123,6 @@ export const USE_CASES: UseCase[] = [
     ],
     accent: "text-sky-300",
     badge: "bg-sky-500/15 text-sky-300 ring-sky-500/40",
-  },
-  {
-    slug: "governance-exam",
-    persona: "Model Governance & Compliance",
-    headline: "Pass SR 11-7 model-risk exams with a live audit trail",
-    pain:
-      "Model documentation and ongoing monitoring take weeks of staff time and still draw examiner findings.",
-    approach:
-      "Every decision is persisted with SHAP values, reason codes, and an immutable audit log — exportable as an examiner-ready pack in one click.",
-    demoShows: [
-      "Governance dashboard with approval-rate by segment",
-      "Four-fifths / adverse-impact monitoring",
-      "One-click tenant-scoped audit export",
-    ],
-    scenarioId: "high_risk",
-    expectedDecision: "reject",
-    metrics: [
-      { label: "Exam prep time (illustrative)", value: "−96%" },
-      { label: "Audit coverage", value: "100%" },
-    ],
-    accent: "text-emerald-300",
-    badge: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40",
   },
 ];
 

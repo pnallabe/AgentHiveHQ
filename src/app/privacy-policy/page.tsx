@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
           <p>Effective Date: January 1, 2025</p>
           
           <h2 className="text-xl font-semibold text-foreground">1. Introduction</h2>
-          <p>Welcome to Helix Decisions, Inc.. We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website [Your Website URL] and use our services.</p>
+          <p>Welcome to AgentHiveHQ, Inc. We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website [Your Website URL] and use our services.</p>
 
           <h2 className="text-xl font-semibold text-foreground">2. Information We Collect</h2>
           <p>We may collect personal information such as your name, email address, and any other information you voluntarily provide to us when you fill out a contact form, subscribe to a newsletter, or otherwise interact with our Site.</p>
@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
           <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes.</p>
 
           <h2 className="text-xl font-semibold text-foreground">8. Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, please contact us at hello@helixdecisions.ai.</p>
+          <p>If you have any questions about this Privacy Policy, please contact us at hello@agenthivehq.com.</p>
         </div>
         <div className="mt-12 text-center">
           <Button asChild>

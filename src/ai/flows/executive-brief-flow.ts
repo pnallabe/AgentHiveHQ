@@ -116,7 +116,7 @@ function buildPrompt(input: ExecutiveBriefInput): string {
 
   const risks = (kpi.top_risk_descriptions ?? []).slice(0, 3).join('; ') || 'No critical risks flagged';
 
-  return `You are an executive analytics AI for a UK retail bank (Helix Decisions platform).
+  return `You are an executive analytics AI for a UK retail bank (AgentHive platform).
 Generate a concise executive brief for the ${kpi.period_label} period covering: ${kpi.product_label}.
 
 TONE: ${toneInstruction[tone ?? 'board_brief']}

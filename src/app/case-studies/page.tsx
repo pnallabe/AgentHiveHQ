@@ -4,9 +4,9 @@ import { CASE_STUDIES } from "@/lib/case-studies";
 import { Logo } from "@/components/shared/Logo";
 
 export const metadata = {
-  title: "Case Studies — Helix Decisions",
+  title: "Case Studies — AgentHive",
   description:
-    "See how lending teams use Helix Decisions to make faster, fairer, and fully explainable credit decisions.",
+    "See how lending teams use AgentHive to make faster, fairer, and fully explainable credit decisions.",
 };
 
 export default function CaseStudiesPage() {
@@ -31,7 +31,7 @@ export default function CaseStudiesPage() {
             Real decisions. Real outcomes.
           </h1>
           <p className="max-w-lg text-zinc-400">
-            See how lending teams use Helix Decisions to approve more qualified
+            See how lending teams use AgentHive to approve more qualified
             borrowers, shrink compliance risk, and defend every decision.
           </p>
           <p className="max-w-lg rounded-lg border border-surface-border bg-surface-raised px-4 py-2 text-xs text-zinc-500">

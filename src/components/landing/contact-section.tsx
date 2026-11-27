@@ -7,8 +7,7 @@ import { fadeInUp, defaultViewport } from "@/lib/animations";
 import { ArrowRight, BookOpen } from "lucide-react";
 
 // ── Config ──────────────────────────────────────────────────────────────────
-// TODO: replace with helixdecisions.ai Calendly link
-const DEMO_BOOKING_URL = "https://calendly.com/helixdecisions/demo";
+const DEMO_REQUEST_URL = "/signup?demo=1";
 
 export function ContactSection() {
   const prefersReduced = useReducedMotion();
@@ -28,7 +27,7 @@ export function ContactSection() {
             Ready to modernise your credit stack?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-zinc-400">
-            Book a 30-minute technical demo with our team. We&apos;ll walk through
+            Request a 30-minute technical demo with our team. We&apos;ll walk through
             the underwriting pipeline, live SHAP explanations, and governance dashboard
             using your data or ours.
           </p>
@@ -38,10 +37,10 @@ export function ContactSection() {
               size="lg"
               className="h-11 bg-brand-500 px-6 text-white hover:bg-brand-600 focus-visible:ring-brand-500"
             >
-              <a href={DEMO_BOOKING_URL}>
-                Book a Demo
+              <Link href={DEMO_REQUEST_URL}>
+                Request a Demo
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </a>
+              </Link>
             </Button>
             <Button
               asChild
@@ -56,7 +55,7 @@ export function ContactSection() {
             </Button>
           </div>
           <p className="mt-4 font-mono text-xs text-zinc-600">
-            No commitment. Demo uses real synthetic data. Set up in under 5 minutes.
+            No commitment. We reply personally within 1 business day.
           </p>
         </motion.div>
       </div>

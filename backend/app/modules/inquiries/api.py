@@ -20,7 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.database import get_db
-from app.modules.inquiries.schemas import TenantInquiryRequest, TenantInquiryResponse
+from app.modules.inquiries.notifications import notify_new_inquiry
+from app.modules.inquiries.sample_package import send_sample_package
+from app.modules.inquiries.schemas import (
+    SamplePackageRequest,
+    TenantInquiryRequest,
+    TenantInquiryResponse,
+)
 from app.modules.underwriting.schemas import ProblemDetail
 from app.shared.db_models import TenantInquiry
 
@@ -64,8 +70,7 @@ async def create_tenant_inquiry(
                 "volume": inquiry.volume,
             },
         )
-        # TODO: notify the team (email/Slack webhook) once a notification
-        # channel is configured — see integrations/health_monitor.py TODO.
+        await notify_new_inquiry(inquiry)
         return TenantInquiryResponse(id=inquiry.id)
     except ValidationError as exc:
         return JSONResponse(
@@ -80,6 +85,66 @@ async def create_tenant_inquiry(
         )
     except Exception as exc:
         logger.exception("Unexpected error in /tenant-inquiries", extra={"error": str(exc)})
+        return JSONResponse(
+            status_code=500,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/internal",
+                title="Internal Server Error",
+                status=500,
+                detail="An unexpected error occurred.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/sample-audit-package",
+    response_model=TenantInquiryResponse,
+    status_code=201,
+    summary="Email a sample SR 11-7 audit package (gated download)",
+    description=(
+        "Public endpoint backing the /audit-package page. Persists the lead as a "
+        "tenant inquiry (referral=audit-package-download), emails the prospect a "
+        "sample Model Validation Report, and notifies the team."
+    ),
+)
+async def sample_audit_package(
+    request: Request,
+    payload: SamplePackageRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TenantInquiryResponse | JSONResponse:
+    try:
+        # Persist as a lead in the same pipeline as demo requests.
+        inquiry = TenantInquiry(
+            name=payload.name.strip(),
+            email=str(payload.email).strip().lower(),
+            company=payload.company.strip(),
+            title=None,
+            use_case="Requested the sample SR 11-7 audit package (gated download).",
+            volume=None,
+            referral="audit-package-download",
+        )
+        db.add(inquiry)
+        await db.flush()
+
+        logger.info(
+            "Sample package requested",
+            extra={"inquiry_id": inquiry.id, "company": inquiry.company},
+        )
+
+        sent = await send_sample_package(
+            name=inquiry.name, email=inquiry.email, company=inquiry.company
+        )
+        await notify_new_inquiry(inquiry)
+
+        detail = (
+            "Sample audit package sent — check your inbox."
+            if sent
+            else "Request received — we'll email the sample shortly."
+        )
+        return TenantInquiryResponse(id=inquiry.id, detail=detail)
+    except Exception as exc:
+        logger.exception("Unexpected error in /sample-audit-package", extra={"error": str(exc)})
         return JSONResponse(
             status_code=500,
             content=ProblemDetail(

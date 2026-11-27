@@ -9,7 +9,7 @@ interface LogoProps {
 }
 
 /**
- * Helix Decisions double-helix SVG logomark + wordmark.
+ * AgentHive double-helix SVG logomark + wordmark.
  * Two S-curve strands in brand-500 crossing twice, with three rungs.
  */
 export function Logo({
@@ -61,10 +61,10 @@ export function Logo({
       {showWordmark && (
         <span className="flex items-baseline gap-1.5">
           <span className="font-heading font-semibold text-lg leading-none tracking-tight text-foreground">
-            Helix Decisions
+            AgentHive
           </span>
           <span className="hidden sm:inline-block font-mono text-[10px] text-brand-400/90 font-medium uppercase tracking-wider">
-            by AgentHive
+            Audit-Ready AI
           </span>
         </span>
       )}

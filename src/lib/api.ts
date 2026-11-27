@@ -175,7 +175,7 @@ async function apiFetch<T>(
     // AbortController fired → timeout
     if (err instanceof Error && err.name === "AbortError") {
       throw new ApiError({
-        type: "https://agenthive.ai/errors/timeout",
+        type: "https://agenthivehq.com/errors/timeout",
         title: "Request Timed Out",
         status: 408,
         detail:

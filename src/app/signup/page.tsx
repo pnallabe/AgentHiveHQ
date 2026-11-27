@@ -2,6 +2,7 @@
 
 import { Suspense, useState, type FormEvent, type ChangeEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +12,6 @@ import { CheckCircle2 } from "lucide-react";
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-// TODO: replace with helixdecisions.ai Calendly link
-const DEMO_BOOKING_URL = "https://calendly.com/helixdecisions/demo";
 
 const VOLUME_OPTIONS = [
   { value: "", label: "Select volume…" },
@@ -42,7 +41,7 @@ function BrandPanel() {
 
       <div className="space-y-4">
         <blockquote className="text-2xl font-bold leading-snug text-zinc-100">
-          Join lending teams making smarter, fairer credit decisions with Helix Decisions.
+          Join lending teams making smarter, fairer credit decisions with AgentHive.
         </blockquote>
         <p className="font-mono text-sm text-zinc-500">
           FCRA · SR 11-7 · SHAP explainability · ISO 8601 audit logs
@@ -72,18 +71,17 @@ function ConfirmationState() {
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-zinc-100">Thanks — we&apos;ll be in touch.</h2>
         <p className="max-w-sm text-sm leading-relaxed text-zinc-400">
-          Our team reviews every request and typically responds within 1 business
-          day. In the meantime, you can book a demo below.
+          Our team reviews every request personally and typically responds within
+          1 business day with demo times.
         </p>
       </div>
       <Button
         asChild
+        variant="outline"
         size="lg"
-        className="h-11 bg-brand-500 px-6 text-white hover:bg-brand-600 focus-visible:ring-brand-500"
+        className="h-11 border-surface-border text-zinc-300 hover:bg-surface-overlay hover:text-zinc-100"
       >
-        <a href={DEMO_BOOKING_URL} target="_blank" rel="noreferrer">
-          Book a Demo
-        </a>
+        <Link href="/lab">Explore the Product Lab meanwhile</Link>
       </Button>
     </div>
   );
@@ -114,7 +112,13 @@ const EMPTY_FORM: FormState = {
 };
 
 function TenantInterestForm() {
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const searchParams = useSearchParams();
+  const isDemoRequest = searchParams.get("demo") === "1";
+  const [form, setForm] = useState<FormState>(() =>
+    isDemoRequest
+      ? { ...EMPTY_FORM, useCase: "Requesting a 30-minute technical demo of the AgentHive platform." }
+      : EMPTY_FORM
+  );
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,11 +186,11 @@ function TenantInterestForm() {
 
     // Fallback: mailto link
     setIsLoading(false);
-    const subject = encodeURIComponent("Helix Decisions — Tenant Inquiry");
+    const subject = encodeURIComponent("AgentHive — Tenant Inquiry");
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nTitle: ${form.title}\nUse Case: ${form.useCase}\nVolume: ${form.volume}\nReferral: ${form.referral}`
     );
-    setSubmitError(`mailto:hello@helixdecisions.ai?subject=${subject}&body=${body}`);
+    setSubmitError(`mailto:hello@agenthivehq.com?subject=${subject}&body=${body}`);
   }
 
   if (submitted) return <ConfirmationState />;
@@ -262,12 +266,12 @@ function TenantInterestForm() {
       {/* Use case */}
       <div className="space-y-1.5">
         <Label htmlFor="use-case" className="text-zinc-300">
-          Describe your lending product and how you plan to use Helix Decisions.{" "}
+          Describe your lending product and how you plan to use AgentHive.{" "}
           <span aria-hidden className="text-red-400">*</span>
         </Label>
         <textarea
           id="use-case"
-          placeholder="We operate a BNPL product for e-commerce and want to use Helix Decisions for real-time underwriting…"
+          placeholder="We operate a BNPL product for e-commerce and want to use AgentHive for real-time underwriting…"
           value={form.useCase}
           onChange={set("useCase")}
           required

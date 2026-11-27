@@ -14,18 +14,18 @@ const LUCIDCREDIT_PRODUCT_ID = "lucidcredit-copilot-v1";
 
 const STATIC_PRODUCTS = [
   {
-    icon: Scale,
-    name: "Underwriting Engine",
+    icon: ShieldCheck,
+    name: "Audit Fabric",
     description:
-      "ML-powered credit decisions with income-first modelling for prime, near-prime, and thin-file applicants.",
-    href: "/tenant-portal",
+      "The governance layer: immutable decision logs, model registry, continuous disparate-impact monitoring, and one-click examiner-ready audit packages.",
+    href: "/lab/governance",
   },
   {
-    icon: ShieldCheck,
-    name: "Governance Suite",
+    icon: Scale,
+    name: "RuleSense Underwriting Engine",
     description:
-      "Immutable audit logs, SHAP explainability, bias monitoring, and FCRA-compliant reason codes.",
-    href: "/lab/governance",
+      "Thin-file credit decisions with income-first modelling, monotonic constraints, and SHAP-derived adverse-action reasons — models you own and can defend.",
+    href: "/tenant-portal",
   },
 ];
 
@@ -47,8 +47,6 @@ export function ProductsSection() {
       });
   }, []);
 
-  const totalCount = STATIC_PRODUCTS.length + (lucidCredit ? 1 : 0) + otherIntegrations.length;
-
   return (
     <section
       id="products"
@@ -63,17 +61,17 @@ export function ProductsSection() {
           viewport={defaultViewport}
         >
           <p className="font-mono text-xs uppercase tracking-widest text-brand-400">
-            Products
+            Platform
           </p>
           <h2
             id="products-heading"
             className="mt-2 font-heading text-3xl font-bold tracking-tight text-zinc-50"
           >
-            {totalCount === 3 ? "Three tools. One credit stack." : `${totalCount} tools. One credit stack.`}
+            Governance first. Decisioning built in.
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
-            From underwriting to explainability to governance — every layer you need,
-            purpose-built for regulated lending.
+            Every layer your model-risk team will ask for — audit trail, bias
+            monitoring, explainability — generated automatically with every decision.
           </p>
         </motion.div>
 

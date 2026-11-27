@@ -30,3 +30,11 @@ class TenantInquiryResponse(BaseModel):
     id: str
     status: str = "new"
     detail: str = "Thank you — our team typically responds within 1 business day."
+
+
+class SamplePackageRequest(BaseModel):
+    """Payload from the /audit-package gated-download form."""
+
+    name: str = Field(min_length=1, max_length=256)
+    email: EmailStr
+    company: str = Field(min_length=1, max_length=256)

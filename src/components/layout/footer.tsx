@@ -77,7 +77,7 @@ export function Footer() {
 				{/* Bottom row */}
 				<div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-surface-border pt-6 sm:flex-row">
 					<p className="font-mono text-xs text-zinc-700">
-						© {new Date().getFullYear()} Helix Decisions, Inc. All rights
+						© {new Date().getFullYear()} AgentHiveHQ, Inc. All rights
 						reserved.
 					</p>
 					<p className="font-mono text-[10px] text-zinc-700 uppercase tracking-widest">

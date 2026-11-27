@@ -12,14 +12,14 @@ import { fadeInUp, fadeInDown, fadeIn } from "@/lib/animations";
 // Framed as such in the UI to stay honest with technical buyers.
 
 const TICKER_ITEMS = [
-  { label: "Avg Decision Time",  value: "340ms"        },
-  { label: "Approval Rate",      value: "71.3%"        },
-  { label: "Decisions (demo)",   value: "1,247"        },
-  { label: "Model AUC",          value: "0.847"        },
-  { label: "Bias Flags",         value: "0 active"     },
-  { label: "Rules Evaluated",    value: "4 per req"    },
-  { label: "P99 Latency",        value: "480ms"        },
-  { label: "Uptime Target",      value: "99.9%"        },
+	{ label: "Avg Decision Time", value: "340ms" },
+	{ label: "Approval Rate", value: "71.3%" },
+	{ label: "Decisions (demo)", value: "1,247" },
+	{ label: "Model AUC", value: "0.847" },
+	{ label: "Bias Flags", value: "0 active" },
+	{ label: "Rules Evaluated", value: "4 per req" },
+	{ label: "P99 Latency", value: "480ms" },
+	{ label: "Uptime Target", value: "99.9%" },
 ];
 
 // Doubled so CSS loop scrolls seamlessly
@@ -28,173 +28,175 @@ const TICKER_DOUBLED = [...TICKER_ITEMS, ...TICKER_ITEMS];
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function HeroSection() {
-  const prefersReduced = useReducedMotion();
+	const prefersReduced = useReducedMotion();
 
-  const MotionDiv = motion.div;
+	const MotionDiv = motion.div;
 
-  return (
-    <section
-      id="home"
-      className="relative overflow-hidden bg-surface-base"
-      style={{ minHeight: "90vh" }}
-    >
-      {/* Radial gradient mesh behind headline */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(51,102,244,0.15), transparent)",
-        }}
-      />
+	return (
+		<section
+			id="home"
+			className="relative overflow-hidden bg-surface-base"
+			style={{ minHeight: "90vh" }}
+		>
+			{/* Radial gradient mesh behind headline */}
+			<div
+				aria-hidden
+				className="pointer-events-none absolute inset-0"
+				style={{
+					background:
+						"radial-gradient(ellipse 80% 50% at 50% -10%, rgba(51,102,244,0.15), transparent)",
+				}}
+			/>
 
-      {/* Dot-grid SVG overlay */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, #27272a 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
-        }}
-      />
+			{/* Dot-grid SVG overlay */}
+			<div
+				aria-hidden
+				className="pointer-events-none absolute inset-0 opacity-20"
+				style={{
+					backgroundImage:
+						"radial-gradient(circle, #27272a 1px, transparent 1px)",
+					backgroundSize: "28px 28px",
+				}}
+			/>
 
-      {/* Main content */}
-      <div className="relative z-10 flex min-h-[90vh] flex-col items-center justify-center px-4 py-24 text-center">
-        <div className="mx-auto max-w-4xl">
+			{/* Main content */}
+			<div className="relative z-10 flex min-h-[90vh] flex-col items-center justify-center px-4 py-24 text-center">
+				<div className="mx-auto max-w-4xl">
+					{/* Tag pill */}
+					<MotionDiv
+						variants={fadeInDown}
+						initial={prefersReduced ? "visible" : "hidden"}
+						animate="visible"
+						style={{ transitionDelay: prefersReduced ? "0ms" : "0ms" }}
+					>
+						<span className="inline-block rounded-full border border-brand-700 bg-brand-950 px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest text-brand-300">
+							Governance-Native Credit Infrastructure
+						</span>
+					</MotionDiv>
 
-          {/* Tag pill */}
-          <MotionDiv
-            variants={fadeInDown}
-            initial={prefersReduced ? "visible" : "hidden"}
-            animate="visible"
-            style={{ transitionDelay: prefersReduced ? "0ms" : "0ms" }}
-          >
-            <span className="inline-block rounded-full border border-brand-700 bg-brand-950 px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest text-brand-300">
-              AI Credit Infrastructure
-            </span>
-          </MotionDiv>
+					{/* H1 */}
+					<MotionDiv
+						variants={fadeInUp}
+						initial={prefersReduced ? "visible" : "hidden"}
+						animate="visible"
+						style={{ transitionDelay: prefersReduced ? "0ms" : "0.1s" }}
+					>
+						<h1 className="mt-6 font-heading text-5xl font-bold tracking-tight text-zinc-50 sm:text-6xl md:text-7xl">
+							Pass Your Next
+							<br />
+							Model-Risk Exam.
+							<br />
+							<span className="bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
+								In Weeks, Not Years.
+							</span>
+						</h1>
+					</MotionDiv>
 
-          {/* H1 */}
-          <MotionDiv
-            variants={fadeInUp}
-            initial={prefersReduced ? "visible" : "hidden"}
-            animate="visible"
-            style={{ transitionDelay: prefersReduced ? "0ms" : "0.1s" }}
-          >
-            <h1 className="mt-6 font-heading text-5xl font-bold tracking-tight text-zinc-50 sm:text-6xl md:text-7xl">
-              Credit Decisioning
-              <br />
-              <span className="bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
-                Built for Scale.
-              </span>
-            </h1>
-          </MotionDiv>
+					{/* Subheading */}
+					<MotionDiv
+						variants={fadeInUp}
+						initial={prefersReduced ? "visible" : "hidden"}
+						animate="visible"
+						style={{ transitionDelay: prefersReduced ? "0ms" : "0.2s" }}
+					>
+						<p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
+							AgentHive generates examiner-ready audit packages from every credit
+							decision — so you can approve thin-file borrowers with models you own,
+							explain, and defend.
+						</p>
+					</MotionDiv>
 
-          {/* Subheading */}
-          <MotionDiv
-            variants={fadeInUp}
-            initial={prefersReduced ? "visible" : "hidden"}
-            animate="visible"
-            style={{ transitionDelay: prefersReduced ? "0ms" : "0.2s" }}
-          >
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-              AI underwriting, SHAP explainability, and governance — production-ready
-              for lenders who can&apos;t afford guesswork.
-            </p>
-          </MotionDiv>
+					{/* CTA row */}
+					<MotionDiv
+						variants={fadeInUp}
+						initial={prefersReduced ? "visible" : "hidden"}
+						animate="visible"
+						style={{ transitionDelay: prefersReduced ? "0ms" : "0.3s" }}
+					>
+						<div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+							<Button
+								asChild
+								size="lg"
+								className="h-11 bg-brand-500 px-6 text-white hover:bg-brand-600 focus-visible:ring-brand-500"
+							>
+								<Link href="/audit-package">
+									Get a Sample Audit Package
+									<ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+								</Link>
+							</Button>
+							<Button
+								asChild
+								variant="outline"
+								size="lg"
+								className="h-11 border-surface-border text-zinc-300 hover:bg-surface-overlay hover:text-zinc-100"
+							>
+								<Link href="#how-it-works">See How It Works</Link>
+							</Button>
+						</div>
+					</MotionDiv>
 
-          {/* CTA row */}
-          <MotionDiv
-            variants={fadeInUp}
-            initial={prefersReduced ? "visible" : "hidden"}
-            animate="visible"
-            style={{ transitionDelay: prefersReduced ? "0ms" : "0.3s" }}
-          >
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="h-11 bg-brand-500 px-6 text-white hover:bg-brand-600 focus-visible:ring-brand-500"
-              >
-                <Link href="/lab">
-                  Try Product Lab
-                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="h-11 border-surface-border text-zinc-300 hover:bg-surface-overlay hover:text-zinc-100"
-              >
-                <Link href="#how-it-works">See How It Works</Link>
-              </Button>
-            </div>
-          </MotionDiv>
+					{/* Trust bar */}
+					<MotionDiv
+						variants={fadeIn}
+						initial={prefersReduced ? "visible" : "hidden"}
+						animate="visible"
+						style={{ transitionDelay: prefersReduced ? "0ms" : "0.5s" }}
+					>
+						<p className="mt-8 font-mono text-xs text-zinc-600">
+							Built for lenders operating under SR 11-7 · ECOA / Reg B · FCRA §615 · CFPB UDAAP · HMDA
+						</p>
+					</MotionDiv>
+				</div>
 
-          {/* Trust bar */}
-          <MotionDiv
-            variants={fadeIn}
-            initial={prefersReduced ? "visible" : "hidden"}
-            animate="visible"
-            style={{ transitionDelay: prefersReduced ? "0ms" : "0.5s" }}
-          >
-            <p className="mt-8 font-mono text-xs text-zinc-600">
-              Designed for institutions operating under SR 11-7 · FCRA §615 · CFPB guidance
-            </p>
-          </MotionDiv>
-        </div>
+				{/* Dashboard preview illustration */}
+				<MotionDiv
+					variants={fadeInUp}
+					initial={prefersReduced ? "visible" : "hidden"}
+					animate="visible"
+					style={{ transitionDelay: prefersReduced ? "0ms" : "0.65s" }}
+					className="mt-16 w-full max-w-5xl px-4"
+				>
+					<div className="relative mx-auto overflow-hidden rounded-2xl border border-surface-border shadow-2xl shadow-brand-900/20">
+						<Image
+							src="/images/dashboard-preview.svg"
+							alt="AgentHive underwriting dashboard showing approved decision, risk score 0.76, and SHAP feature importance chart"
+							width={900}
+							height={480}
+							priority
+							className="w-full h-auto"
+							style={{ display: "block" }}
+						/>
+						{/* Scanline gloss overlay */}
+						<div
+							aria-hidden
+							className="pointer-events-none absolute inset-0 rounded-2xl"
+							style={{
+								background:
+									"linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 60%)",
+							}}
+						/>
+					</div>
+				</MotionDiv>
+			</div>
 
-        {/* Dashboard preview illustration */}
-        <MotionDiv
-          variants={fadeInUp}
-          initial={prefersReduced ? "visible" : "hidden"}
-          animate="visible"
-          style={{ transitionDelay: prefersReduced ? "0ms" : "0.65s" }}
-          className="mt-16 w-full max-w-5xl px-4"
-        >
-          <div className="relative mx-auto overflow-hidden rounded-2xl border border-surface-border shadow-2xl shadow-brand-900/20">
-            <Image
-              src="/images/dashboard-preview.svg"
-              alt="Helix Decisions underwriting dashboard showing approved decision, risk score 0.76, and SHAP feature importance chart"
-              width={900}
-              height={480}
-              priority
-              className="w-full h-auto"
-              style={{ display: "block" }}
-            />
-            {/* Scanline gloss overlay */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-2xl"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 60%)",
-              }}
-            />
-          </div>
-        </MotionDiv>
-      </div>
-
-      {/* Metric ticker strip */}
-      <div
-        className="relative border-y border-surface-border bg-surface-raised py-3 overflow-hidden"
-        aria-label="Platform metrics"
-        role="marquee"
-      >
-        <div className="ticker-track flex items-center gap-12 whitespace-nowrap">
-          {TICKER_DOUBLED.map((item, i) => (
-            <span key={i} className="inline-flex items-center gap-2 font-mono text-xs text-zinc-500">
-              <span className="text-zinc-600">「</span>
-              <span>{item.label}:</span>
-              <span className="text-zinc-300 font-medium">{item.value}</span>
-              <span className="text-zinc-600">」</span>
-            </span>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+			{/* Metric ticker strip */}
+			<div
+				className="relative border-y border-surface-border bg-surface-raised py-3 overflow-hidden"
+				aria-label="Platform metrics"
+				role="marquee"
+			>
+				<div className="ticker-track flex items-center gap-12 whitespace-nowrap">
+					{TICKER_DOUBLED.map((item, i) => (
+						<span key={i} className="inline-flex items-center gap-2 font-mono text-xs text-zinc-500">
+							<span className="text-zinc-600">「</span>
+							<span>{item.label}:</span>
+							<span className="text-zinc-300 font-medium">{item.value}</span>
+							<span className="text-zinc-600">」</span>
+						</span>
+					))}
+				</div>
+			</div>
+		</section>
+	);
 }
 

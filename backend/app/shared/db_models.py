@@ -686,3 +686,200 @@ class PortfolioSnapshot(Base):
 
     def __repr__(self) -> str:
         return f"<PortfolioSnapshot id={self.id} date={self.snapshot_date} product={self.product_type}>"
+
+
+# =============================================================================
+# Outreach engine — governance-first prospecting
+#
+# The outreach pipeline is itself governed: every touch is an append-only
+# OutreachMessage row, every send checks OutreachSuppression first, and every
+# email carries a signed one-click unsubscribe link.  No row is ever deleted;
+# state moves forward via status fields.
+# =============================================================================
+
+
+class OutreachProspect(Base):
+    """A single outreach target — one contact at one mid-market fintech."""
+
+    __tablename__ = "outreach_prospects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
+    )
+
+    # ── Company (ICP: mid-market fintech lenders, $100M–$5B AUM) ────────────
+    company: Mapped[str] = mapped_column(String(256), nullable=False)
+    domain: Mapped[Optional[str]] = mapped_column(String(256), nullable=True, index=True)
+    segment: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="fintech-lender", index=True,
+        comment="fintech-lender | credit-union | community-bank | other",
+    )
+    aum_band: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True,
+        comment="e.g. 100m-500m | 500m-1b | 1b-5b",
+    )
+
+    # ── Contact ─────────────────────────────────────────────────────────────
+    contact_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    email: Mapped[str] = mapped_column(String(256), nullable=False, unique=True, index=True)
+    title: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+
+    # ── Personalisation context (optional, used by template tokens) ─────────
+    notes: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True,
+        comment="Rep research: trigger events, exam findings, hiring signals",
+    )
+    source: Mapped[Optional[str]] = mapped_column(
+        String(128), nullable=True,
+        comment="Where the prospect came from: csv-import | inbound | referral | event",
+    )
+
+    # ── Lifecycle ────────────────────────────────────────────────────────────
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="new", index=True,
+        comment="new | enrolled | replied | converted | disqualified | bounced | unsubscribed",
+    )
+
+    enrollments: Mapped[List["OutreachEnrollment"]] = relationship(
+        back_populates="prospect", cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<OutreachProspect id={self.id} company={self.company} email={self.email} status={self.status}>"
+
+
+class OutreachSequence(Base):
+    """A named multi-touch email sequence. Steps stored as JSON:
+
+    [{"step": 1, "delay_days": 0, "template": "exam_ready_t1"},
+     {"step": 2, "delay_days": 4, "template": "exam_ready_t2"}, ...]
+    """
+
+    __tablename__ = "outreach_sequences"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    steps: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    enrollments: Mapped[List["OutreachEnrollment"]] = relationship(
+        back_populates="sequence", cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<OutreachSequence id={self.id} name={self.name} active={self.active}>"
+
+
+class OutreachEnrollment(Base):
+    """A prospect's position inside a sequence."""
+
+    __tablename__ = "outreach_enrollments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+    )
+    prospect_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_prospects.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    sequence_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_sequences.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    current_step: Mapped[int] = mapped_column(nullable=False, default=0)
+    next_send_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True,
+        comment="UTC time the next touch becomes due; NULL when finished",
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="active", index=True,
+        comment="active | paused | finished | stopped (reply/unsub/bounce)",
+    )
+
+    prospect: Mapped[OutreachProspect] = relationship(back_populates="enrollments")
+    sequence: Mapped[OutreachSequence] = relationship(back_populates="enrollments")
+
+    def __repr__(self) -> str:
+        return (
+            f"<OutreachEnrollment id={self.id} prospect={self.prospect_id} "
+            f"step={self.current_step} status={self.status}>"
+        )
+
+
+class OutreachMessage(Base):
+    """Append-only log of a single outreach touch. Never update content fields
+    after insert — only engagement timestamps (opened_at/clicked_at/...) move."""
+
+    __tablename__ = "outreach_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True,
+    )
+    enrollment_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_enrollments.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    prospect_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_prospects.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    step: Mapped[int] = mapped_column(nullable=False)
+    template: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    to_email: Mapped[str] = mapped_column(String(256), nullable=False)
+    subject: Mapped[str] = mapped_column(String(512), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    opened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    clicked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    bounced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="queued", index=True,
+        comment="queued | sent | failed | suppressed",
+    )
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<OutreachMessage id={self.id} to={self.to_email} step={self.step} status={self.status}>"
+
+
+class OutreachSuppression(Base):
+    """Suppression list — checked before EVERY send. Entries are created by
+    unsubscribes, hard bounces, or manual adds. Never delete; this is the
+    compliance record."""
+
+    __tablename__ = "outreach_suppressions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+    )
+    email: Mapped[Optional[str]] = mapped_column(
+        String(256), nullable=True, unique=True, index=True,
+        comment="Specific address to suppress (mutually exclusive with domain)",
+    )
+    domain: Mapped[Optional[str]] = mapped_column(
+        String(256), nullable=True, index=True,
+        comment="Whole-domain suppression, e.g. competitor or legal request",
+    )
+    reason: Mapped[str] = mapped_column(
+        String(64), nullable=False,
+        comment="unsubscribe | hard_bounce | manual | complaint",
+    )
+
+    def __repr__(self) -> str:
+        target = self.email or self.domain
+        return f"<OutreachSuppression {target} reason={self.reason}>"

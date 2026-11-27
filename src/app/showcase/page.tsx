@@ -4,7 +4,7 @@ import { Logo } from "@/components/shared/Logo";
 import { UseCaseCard } from "@/components/showcase/UseCaseCard";
 
 export const metadata: Metadata = {
-  title: "Use Cases — Helix Decisions",
+  title: "Use Cases — AgentHive",
   description:
     "Interactive, runnable credit-decisioning use cases: thin-file inclusion, gig-economy underwriting, new-to-country applicants, and model governance.",
 };

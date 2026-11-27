@@ -677,7 +677,7 @@ export default function IntegrationsLabPage() {
             Integration Gateway
           </h1>
           <p className="mt-1 text-zinc-400 text-sm">
-            Chat with external AI products connected via the Helix Decisions secure proxy.
+            Chat with external AI products connected via the AgentHive secure proxy.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={loadProducts} disabled={loadingList} className="shrink-0">

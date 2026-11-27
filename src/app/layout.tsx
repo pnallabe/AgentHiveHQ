@@ -30,21 +30,21 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   title: {
-    default: 'AgentHiveHQ | AI Credit Decisioning Platform',
-    template: '%s | AgentHiveHQ',
+    default: 'AgentHive | Audit-Ready AI Credit Decisioning',
+    template: '%s | AgentHive',
   },
   description:
-    'Production-ready AI underwriting, explainability, and governance tooling for lenders who need faster, safer credit decisions.',
+    'Governance-native credit decisioning for regulated lenders. Approve thin-file borrowers with models you own — and pass SR 11-7 exams with machine-generated audit packages.',
   keywords:
-    'AI credit decisioning, underwriting, explainability, model governance, FCRA compliance, credit risk workflow, AgentHiveHQ',
+    'AI credit decisioning, model risk management, SR 11-7, audit package, model governance, thin-file underwriting, explainability, FCRA compliance, adverse action reasons, AgentHive',
   openGraph: {
     type: 'website',
     locale: 'en_US',
     url: 'https://agenthivehq.com',
-    siteName: 'AgentHiveHQ',
-    title: 'AgentHiveHQ | AI Credit Decisioning Platform',
+    siteName: 'AgentHive',
+    title: 'AgentHive | Audit-Ready AI Credit Decisioning',
     description:
-      'Production-ready AI underwriting, explainability, and governance tooling for lenders who need faster, safer credit decisions.',
+      'Governance-native credit decisioning for regulated lenders. Approve thin-file borrowers with models you own — and pass SR 11-7 exams with machine-generated audit packages.',
   },
   robots: {
     index: true,

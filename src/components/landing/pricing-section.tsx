@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils";
 
 // ── Tier definitions ─────────────────────────────────────────────────────────
 
-// TODO: replace with helixdecisions.ai Calendly link
-const DEMO_BOOKING_URL = "https://calendly.com/helixdecisions/demo";
+const DEMO_REQUEST_URL = "/signup?demo=1";
 
 interface Tier {
   id:          string;
@@ -54,7 +53,7 @@ const TIERS: Tier[] = [
     priceSub:    "/ month",
     description: "For scaling lenders who need production throughput, bias monitoring, and dedicated support.",
     highlighted: true,
-    cta:         { label: "Book a Demo", href: DEMO_BOOKING_URL, external: true },
+    cta:         { label: "Request a Demo", href: DEMO_REQUEST_URL },
     limit:       "Up to 20,000 decisions / month",
     features: [
       "Everything in Starter",
@@ -75,7 +74,7 @@ const TIERS: Tier[] = [
     priceSub:    "pricing",
     description: "For regulated institutions needing private deployment, SOC 2, and custom model governance.",
     highlighted: false,
-    cta:         { label: "Talk to Sales", href: DEMO_BOOKING_URL, external: true },
+    cta:         { label: "Talk to Sales", href: DEMO_REQUEST_URL },
     limit:       "Unlimited decisions",
     features: [
       "Everything in Growth",

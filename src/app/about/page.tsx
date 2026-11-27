@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, Scale, Lock, Building2, ArrowRight } from "lucide-react";
 
 export const metadata = {
-  title: "About Us | Helix Decisions by AgentHive",
-  description: "Learn about Helix Decisions, our mission in fair lending infrastructure, model risk governance under SR 11-7, and our leadership team.",
+  title: "About Us | AgentHive",
+  description: "Learn about AgentHive, our mission in fair lending infrastructure, model risk governance under SR 11-7, and our leadership team.",
 };
 
 const STATS = [
@@ -75,7 +75,7 @@ export default function AboutPage() {
               </span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-              Helix Decisions by AgentHive provides production-ready AI underwriting, SHAP explainability, and automated model governance for lenders who demand accuracy without compliance risk.
+              AgentHive provides production-ready AI underwriting, SHAP explainability, and automated model governance for lenders who demand accuracy without compliance risk.
             </p>
           </div>
         </section>
