@@ -302,5 +302,5 @@ POST /api/v1/sample-audit-package       # gated MVR download
 | Integration Gateway = internal plumbing | Not on homepage; docs behind auth | ✅ Consistent |
 | Single ICP: mid-market fintech lender CRO | Copy targets model-risk/compliance buyer | ✅ Consistent |
 | Pricing signal | Pricing section live ($499 / $1,999 / Custom) | ✅ Present |
-| Named case studies / real exam proof | Case studies are illustrative | ⚠️ Gap — Phase 2 goal |
-| LOS integrations | Not yet on site | ⚠️ Gap — Phase 2 |
+| LOS integrations | `/integrations` page live (MeridianLink/Origence/Temenos ready; Symitar/Fiserv/Corelation/Sync1 roadmap) | ✅ Consistent |
+| Named case studies / real exam proof | Case studies are illustrative | ⚠️ Gap — Phase 2 goal (design-partner outreach via `docs/OUTREACH.md`) |

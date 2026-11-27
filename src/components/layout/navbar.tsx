@@ -22,6 +22,7 @@ import { redirectUserToCrp } from "@/lib/crp-routing";
 
 const NAV_LINKS = [
   { href: "/#products",     label: "Products"       },
+  { href: "/integrations",  label: "Integrations"   },
   { href: "/#how-it-works", label: "Platform"       },
   { href: "/engineering",   label: "Engineering"    },
   { href: "/about",         label: "About Us"       },

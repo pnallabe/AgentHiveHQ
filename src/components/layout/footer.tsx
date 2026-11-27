@@ -6,6 +6,7 @@ const FOOTER_NAV = [
 		heading: "Platform",
 		links: [
 			{ label: "Products", href: "/#products" },
+			{ label: "Integrations", href: "/integrations" },
 			{ label: "How It Works", href: "/#how-it-works" },
 			{ label: "Case Studies", href: "/case-studies" },
 			{ label: "Showcase", href: "/showcase" },
