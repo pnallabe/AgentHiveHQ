@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -25,7 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import TenantContext, optional_tenant, require_firebase_user
 from app.core.logging import get_logger
 from app.database import get_db
+from app.modules.underwriting.batch import run_batch
 from app.modules.underwriting.schemas import (
+    BatchDecisionResponse,
     DecisionSummary,
     PaginatedDecisions,
     ProblemDetail,
@@ -85,6 +87,72 @@ async def create_decision(
                 title="Internal Server Error",
                 status=500,
                 detail="An unexpected error occurred.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+
+
+# ── POST /decision/batch (bulk CSV upload) ───────────────────────────────────
+
+@router.post(
+    "/decision/batch",
+    response_model=BatchDecisionResponse,
+    status_code=200,
+    summary="Bulk decision a CSV of applications",
+    description=(
+        "Upload a CSV of applicant profiles; every row runs through the live "
+        "decision pipeline (feature engineering → rules → model → persist) and is "
+        "stored as a tenant-scoped DecisionRecord + AuditLog. The resulting records "
+        "feed the governance dashboard and the one-click exam package. "
+        "CSV columns: income, employment_length, housing_status, credit_score (optional), "
+        "applicant_ref (optional)."
+    ),
+)
+async def create_batch_decision(
+    request: Request,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_firebase_user),
+    tenant: Optional[TenantContext] = Depends(optional_tenant),
+) -> BatchDecisionResponse | JSONResponse:
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        return JSONResponse(
+            status_code=422,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/validation",
+                title="Invalid File",
+                status=422,
+                detail="Upload a .csv file.",
+                instance=str(request.url.path),
+            ).model_dump(),
+        )
+    try:
+        csv_bytes = await file.read()
+        result = await run_batch(
+            csv_bytes,
+            db,
+            tenant_id=tenant.tenant_id if tenant else None,
+        )
+        return BatchDecisionResponse(
+            total_rows=result.total_rows,
+            processed=result.processed,
+            approved=result.approved,
+            rejected=result.rejected,
+            reviewed=result.reviewed,
+            failed=result.failed,
+            approval_rate=result.approval_rate,
+            elapsed_seconds=result.elapsed_seconds,
+            errors=result.errors,
+        )
+    except Exception as exc:
+        logger.exception("Unexpected error in /decision/batch", extra={"error": str(exc)})
+        return JSONResponse(
+            status_code=500,
+            content=ProblemDetail(
+                type="https://agenthive.ai/errors/internal",
+                title="Internal Server Error",
+                status=500,
+                detail="An unexpected error occurred during batch processing.",
                 instance=str(request.url.path),
             ).model_dump(),
         )

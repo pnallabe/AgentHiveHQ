@@ -76,3 +76,4 @@ agenthive_data/data_store/
 
 # GCloud ignore file
 .gcloudignore
+backend/data/demo_client_100k.csv

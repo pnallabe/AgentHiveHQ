@@ -160,3 +160,19 @@ class ProblemDetail(BaseModel):
     status: int
     detail: str
     instance: str
+
+
+# ── Batch response ────────────────────────────────────────────────────────────
+
+class BatchDecisionResponse(BaseModel):
+    """Summary of a bulk CSV decision run."""
+
+    total_rows: int
+    processed: int
+    approved: int
+    rejected: int
+    reviewed: int
+    failed: int
+    approval_rate: float
+    elapsed_seconds: float
+    errors: list[dict[str, Any]] = Field(default_factory=list)
